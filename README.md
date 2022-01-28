@@ -1,4 +1,4 @@
-# Governance WORKING DRAFT <!-- omit in toc -->
+# Governance <!-- omit in toc -->
 
 The official governance model for all the projects in the dasher project
 

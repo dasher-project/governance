@@ -8,11 +8,17 @@ The official governance model for all the projects in the dasher project
   - [Contributor](#contributor)
 - [Funding](#funding)
 - [Decision making](#decision-making)
+  - [1. Engage with the community](#1-engage-with-the-community)
+  - [2. Create an RFC](#2-create-an-rfc)
+  - [3. Discussion](#3-discussion)
+  - [4. Make changes following discussion](#4-make-changes-following-discussion)
+  - [5. Reach a consensus](#5-reach-a-consensus)
+  - [6. Make changes](#6-make-changes)
 - [Resources](#resources)
 
 # Roles
 
-We have a identified a few roles within the project. Each individual and organizations involved in the project acts within one of these roles.
+We have a identified a the following roles within the project. Each individual and organizations involved in the project acts within one of these roles.
 
 ## Stewards
 
@@ -27,6 +33,7 @@ The expectations of stewards are as follows:
 - To facilitate discussions about the direction of the project
 - To regularly update everyone involved with the project about its current progress
 - All the expectations of maintainers also apply
+- To make sure that major decisions follow the decision making process
 
 ## Maintainer
 
@@ -78,6 +85,43 @@ All funding received and spent will be done in a public manner. There will be op
 - [FY2022](./FY2022.md)
 
 # Decision making
+
+Each major decision starts as a Request for Comments (RFC). Everyone is invited to discuss the proposal, to work toward a shared understanding of the tradeoffs.
+
+The decision making process only needs to be followed when making 'substantial' changes. Changes don't just apply to code but also architectural, product and process changes. If you are unaware if your change constitutes 'substantial' then feel free to open an RFC with minimal detail to ask before you commit to completing a full RFC.
+
+The decision making models is closely based on [Rusts RFC model](https://github.com/rust-lang/rfcs).
+
+The decision making process is as follows:
+
+## 1. Engage with the community
+
+Before you create an RFC you should discuss the proposal with the community. This will inform your RFC and allow you to preempt any issues with your RFC that you can specifically address in your initial post.
+
+## 2. Create an RFC
+
+Once you have decided to create an RFC you start by creating a new Github Issue. RFCs should be created in the codebase that is most relevant to them. If they are relevant to many repositories then they should be placed in this repository.
+
+You issue should be titled with the format `RFC - Brief Description`.
+
+An RFC should include the following items:
+
+- Summary of change
+- Motivation
+- Potential Drawbacks
+- Alternatives
+- Prior Art
+- Unresolved questions
+
+## 3. Discussion
+
+All discussion about the RFC should be kept to the issue thread. This will allow the conversation to be open to everyone and will serve as a good way to preserve the history of decisions we have taken.
+
+## 4. Make changes following discussion
+
+## 5. Reach a consensus
+
+## 6. Make changes
 
 # Resources
 

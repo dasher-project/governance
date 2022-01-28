@@ -7,6 +7,7 @@ The official governance model for all the projects in the dasher project
   - [Maintainer](#maintainer)
   - [Contributor](#contributor)
 - [Funding](#funding)
+- [Decision making](#decision-making)
 - [Resources](#resources)
 
 # Roles
@@ -17,19 +18,32 @@ We have a identified a few roles within the project. Each individual and organiz
 
 The current steward of the project is [Ace Centre](http://acecentre.org.uk/). Ace Centre currently delegates two individuals to act as stewards on their behalf. Currently the stewards are [Gavin Henderson](https://acecentre.org.uk/about/staff/gavin-henderson) and [Will Wade](https://acecentre.org.uk/about/staff/will-wade).
 
+The expectations of stewards are as follows:
+
+- To make sure maintainers and contributors have the tools to be successful
+- To apply for new funding
+- To make make clear the needs of the end users
+- To make sure that project development is always moving towards current aims and goals
+- To facilitate discussions about the direction of the project
+- To regularly update everyone involved with the project about its current progress
+- All the expectations of maintainers also apply
+
 ## Maintainer
 
-Maintainers, are responsible for helping to triage issues,
+The expectations of maintainers are as follows:
 
-There is a time committment involved in
-
-Here is a list of maintainers and codebases they maintain:
+- Triage bug and feature requests
+- Engage with discussions on Slack
+- Create a welcoming environment for new contributors
+- Enforce the [Code Of Conduct](./code-of-conduct.md)
 
 ## Contributor
 
 A contributor is anyone who contributes to the project. Contributions are not limited to code changes. Joining in a discussion, opening an issue, giving feedback and writing docs are all considered as 'contributions'.
 
 Everyone is welcome as a contributor.
+
+There are no expectations, other than all contributions must abide by the [Code Of Conduct](./code-of-conduct.md).
 
 # Funding
 
@@ -44,6 +58,8 @@ When appropriate Ace Centre will use some of the money to cover the cost of futu
 All funding received and spent will be done in a public manner. There will be open discussions about funding and spending on our communication channels. However, we will explicitly maintain a spending log for each financial year in this repository. See below the spending/funding logs:
 
 - [FY2022](./FY2022.md)
+
+# Decision making
 
 # Resources
 

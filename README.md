@@ -37,6 +37,24 @@ The expectations of maintainers are as follows:
 - Create a welcoming environment for new contributors
 - Enforce the [Code Of Conduct](./code-of-conduct.md)
 
+Here are a current list of codebases and their maintainers:
+
+- [website](https://github.com/dasher-project/website)
+  - [Will Wade](https://github.com/willwade)
+  - [Gavin Henderson](https://github.com/gavinhenderson5)
+- [dasher-web](https://github.com/dasher-project/dasher-web)
+  - [Jim](https://github.com/sjjhsjjh)
+  - [Jeremy Cope](https://github.com/jcope)
+  - [Gavin Henderson](https://github.com/gavinhenderson5)
+  - [Adam Spickard](https://github.com/aspickard)
+- [dasher-captivewebview](https://github.com/dasher-project/dasher-captivewebview)
+  - [Jim](https://github.com/sjjhsjjh)
+- [dasher-electron](https://github.com/dasher-project/dasher-electron)
+  - [Adam Spickard](https://github.com/aspickard)
+  - [Gavin Henderson](https://github.com/gavinhenderson5)
+- [dasher](https://github.com/dasher-project/dasher)
+  - Unmaintained
+
 ## Contributor
 
 A contributor is anyone who contributes to the project. Contributions are not limited to code changes. Joining in a discussion, opening an issue, giving feedback and writing docs are all considered as 'contributions'.

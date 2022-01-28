@@ -127,9 +127,9 @@ The creator of the RFC will make changes based on the feedback and discussion.
 
 ## 5. Reach a consensus
 
-We will try and reach a general consensus on the RFC, whether it should be accepted or rejected. Ideally there will be a consensus with everyone engaging in the issue.
+We will try and reach a general consensus on the RFC, whether it should be accepted or rejected. Ideally there will be a consensus with everyone who has engaged with the RFC.
 
-However, if there the only consensus required is that of the maintainers and stewards.
+However, the only consensus required is that of the maintainers and stewards.
 
 Once the consensus of accepted or rejected is met the RFC issue will be closed and then it should be given a label identifying the status of the RFC.
 

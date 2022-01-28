@@ -11,7 +11,7 @@ The official governance model for all the projects in the dasher project
   - [1. Engage with the community](#1-engage-with-the-community)
   - [2. Create an RFC](#2-create-an-rfc)
   - [3. Discussion](#3-discussion)
-  - [4. Make changes following discussion](#4-make-changes-following-discussion)
+  - [4. Make changes to RFC following discussion](#4-make-changes-to-rfc-following-discussion)
   - [5. Reach a consensus](#5-reach-a-consensus)
   - [6. Make changes](#6-make-changes)
 - [Resources](#resources)
@@ -90,7 +90,9 @@ Each major decision starts as a Request for Comments (RFC). Everyone is invited 
 
 The decision making process only needs to be followed when making 'substantial' changes. Changes don't just apply to code but also architectural, product and process changes. If you are unaware if your change constitutes 'substantial' then feel free to open an RFC with minimal detail to ask before you commit to completing a full RFC.
 
-The decision making models is closely based on [Rusts RFC model](https://github.com/rust-lang/rfcs).
+The decision making model is closely based on [Rusts RFC model](https://github.com/rust-lang/rfcs).
+
+The purpose of this process is not to be absolute or be overly cumbersome. Its a simple, lightweight process to make sure everyone has their voice heard.
 
 The decision making process is as follows:
 
@@ -113,15 +115,29 @@ An RFC should include the following items:
 - Prior Art
 - Unresolved questions
 
+Once you have created the RFC please share it as widely as you can on all communication channels.
+
 ## 3. Discussion
 
 All discussion about the RFC should be kept to the issue thread. This will allow the conversation to be open to everyone and will serve as a good way to preserve the history of decisions we have taken.
 
-## 4. Make changes following discussion
+## 4. Make changes to RFC following discussion
+
+The creator of the RFC will make changes based on the feedback and discussion.
 
 ## 5. Reach a consensus
 
+We will try and reach a general consensus on the RFC, whether it should be accepted or rejected. Ideally there will be a consensus with everyone engaging in the issue.
+
+However, if there the only consensus required is that of the maintainers and stewards.
+
+Once the consensus of accepted or rejected is met the RFC issue will be closed and then it should be given a label identifying the status of the RFC.
+
+The consensus cannot be reached until 7 days have passed since the RFC was created.
+
 ## 6. Make changes
+
+Once the decision has been made then the changes suggested should be made. If they are significant changes then they might make more sense to open issues referencing the RFC to be completed later.
 
 # Resources
 

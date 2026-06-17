@@ -36,3 +36,4 @@ The process is closely based on [Rust's RFC model](https://github.com/rust-lang/
 | _0000_ | _(`0000-template.md` — not a real RFC)_ | — | — |
 | [0001](./0001-analytics.md) | Privacy-preserving analytics and crash reporting | proposed | apple, windows, gtk |
 | [0002](./0002-lucide-icons.md) | Adopt Lucide as the cross-platform icon set | proposed | apple, windows, gtk |
+| [0003](./0003-multilingual-ui.md) | Multilingual UI support across all frontends | proposed | apple, windows, gtk, core |

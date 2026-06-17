@@ -64,7 +64,7 @@ decisions when appropriate.
 
 # Reporting violations
 
-If you would like to report a violation please contact either [Gavin Henderson](ghenderson@acecentre.org.uk) or [Will Wade](wwade@acecentre.org.uk). You can also contact us through slack.
+If you would like to report a violation please contact [Will Wade](https://github.com/willwade) via GitHub or Slack.
 
 If you would like to report a violation involving these individuals then please reach out to one of the other maintainers outlined in the [governance document](./README.md).
 

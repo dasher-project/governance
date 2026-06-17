@@ -37,3 +37,4 @@ The process is closely based on [Rust's RFC model](https://github.com/rust-lang/
 | [0001](./0001-analytics.md) | Privacy-preserving analytics and crash reporting | proposed | apple, windows, gtk |
 | [0002](./0002-lucide-icons.md) | Adopt Lucide as the cross-platform icon set | proposed | apple, windows, gtk |
 | [0003](./0003-multilingual-ui.md) | Multilingual UI support across all frontends | proposed | apple, windows, gtk, core |
+| [0004](./0004-onboarding.md) | First-run onboarding experience | proposed | apple, windows, gtk, core |

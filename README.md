@@ -43,6 +43,7 @@ The expectations of maintainers are as follows:
 - Engage with discussions on Slack
 - Create a welcoming environment for new contributors
 - Enforce the [Code Of Conduct](./code-of-conduct.md)
+- Ensure all merged PRs have DCO sign-off (`Signed-off-by:`)
 
 Dasher v6 is one **shared engine** ([DasherCore](https://github.com/dasher-project/DasherCore)) consumed by several **native frontends**. The current active codebases and their most active contributors are:
 
@@ -73,7 +74,7 @@ A contributor is anyone who contributes to the project. Contributions are not li
 
 Everyone is welcome as a contributor.
 
-There are no expectations, other than all contributions must abide by the [Code Of Conduct](./code-of-conduct.md).
+All contributions must abide by the [Code Of Conduct](./code-of-conduct.md). Code contributions must also be signed off under the [Developer Certificate of Origin (DCO)](https://developercertificate.org/) — see the [contributor guide](https://github.com/dasher-project/.github/blob/main/CONTRIBUTING.md#developer-certificate-of-origin-dco) for details.
 
 # Funding
 

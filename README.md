@@ -44,23 +44,28 @@ The expectations of maintainers are as follows:
 - Create a welcoming environment for new contributors
 - Enforce the [Code Of Conduct](./code-of-conduct.md)
 
-Here are a current list of codebases and their maintainers:
+Dasher v6 is one **shared engine** ([DasherCore](https://github.com/dasher-project/DasherCore)) consumed by several **native frontends**. The current active codebases and their most active contributors are:
 
-- [website](https://github.com/dasher-project/website)
-  - [Will Wade](https://github.com/willwade)
-  - [Gavin Henderson](https://github.com/gavinhenderson5)
-- [dasher-web](https://github.com/dasher-project/dasher-web)
-  - [Jim](https://github.com/sjjhsjjh)
-  - [Jeremy Cope](https://github.com/jcope)
-  - [Gavin Henderson](https://github.com/gavinhenderson5)
-  - [Adam Spickard](https://github.com/aspickard)
-- [dasher-captivewebview](https://github.com/dasher-project/dasher-captivewebview)
-  - [Jim](https://github.com/sjjhsjjh)
-- [dasher-electron](https://github.com/dasher-project/dasher-electron)
-  - [Adam Spickard](https://github.com/aspickard)
-  - [Gavin Henderson](https://github.com/gavinhenderson5)
-- [dasher](https://github.com/dasher-project/dasher)
-  - Unmaintained
+- [DasherCore](https://github.com/dasher-project/DasherCore) — shared C++ engine + C API
+  - [prlw1](https://github.com/prlw1), [ipomoena](https://github.com/ipomoena), [willwade](https://github.com/willwade), [PapeCoding](https://github.com/PapeCoding), [gavinhenderson](https://github.com/gavinhenderson), [cagdasgerede](https://github.com/cagdasgerede)
+- [Dasher-Apple](https://github.com/dasher-project/Dasher-Apple) — iOS / macOS / visionOS (SwiftUI)
+  - [willwade](https://github.com/willwade)
+- [Dasher-Windows](https://github.com/dasher-project/Dasher-Windows) — Windows (Avalonia / .NET)
+  - [willwade](https://github.com/willwade)
+- [Dasher-GTK](https://github.com/dasher-project/Dasher-GTK) — Linux + Win/macOS fallback (GTK4)
+  - [PapeCoding](https://github.com/PapeCoding)
+- [website](https://github.com/dasher-project/website) — [dasher.at](https://dasher.at), docs + public feature status (Astro)
+  - [willwade](https://github.com/willwade), [gavinhenderson](https://github.com/gavinhenderson), [cagdasgerede](https://github.com/cagdasgerede)
+- [dasher-web](https://github.com/dasher-project/dasher-web) — in-browser WASM app
+  - [sjjhsjjh](https://github.com/sjjhsjjh), [jcope](https://github.com/jcope), [willwade](https://github.com/willwade), [agutkin](https://github.com/agutkin), [gavinhenderson](https://github.com/gavinhenderson)
+
+> Formal maintainer and `CODEOWNERS` assignments are being added per-repo (see each repo's `.github/CODEOWNERS`). The lists above show the most active contributors; the steward-confirmed maintainer roster should be finalised here as those land.
+
+**Legacy / maintenance-only:**
+
+- [dasher-captivewebview](https://github.com/dasher-project/dasher-captivewebview) — [Jim](https://github.com/sjjhsjjh)
+- [dasher-electron](https://github.com/dasher-project/dasher-electron) — [Adam Spickard](https://github.com/aspickard), [Gavin Henderson](https://github.com/gavinhenderson)
+- [dasher](https://github.com/dasher-project/dasher) — the original GPL C codebase — **unmaintained** (superseded by DasherCore + the native frontends above)
 
 ## Contributor
 
@@ -114,6 +119,8 @@ An RFC should include the following items:
 - Alternatives
 - Prior Art
 - Unresolved questions
+
+> 💡 A ready-made template and the live index of all RFCs live in the [`rfcs/`](./rfcs) directory of this repository: copy [`rfcs/0000-template.md`](./rfcs/0000-template.md) to get started, and see [`rfcs/README.md`](./rfcs/README.md) for the status of every RFC. For cross-platform UX or hardware interactions especially, an RFC should describe the approach on **each** platform so maintainers can align.
 
 Once you have created the RFC please share it as widely as you can on all communication channels.
 

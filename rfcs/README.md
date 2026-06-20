@@ -40,3 +40,4 @@ The process is closely based on [Rust's RFC model](https://github.com/rust-lang/
 | [0004](./0004-onboarding.md) | First-run onboarding experience | proposed | apple, windows, gtk, core |
 | [0005](./0005-v5-migration.md) | Dasher v5 → v6 migration: settings, alphabets, and user data | proposed | apple, windows, gtk, core |
 | [0006](./0006-settings-ia.md) | Settings information architecture and progressive disclosure | proposed | apple, windows, gtk, core |
+| [0007](./0007-dark-mode-palettes.md) | Dark mode support via appearance-aware colour palettes | proposed | apple, windows, gtk, android, web, core |

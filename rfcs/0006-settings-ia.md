@@ -2,9 +2,9 @@
 rfc: 0006
 title: Settings information architecture and progressive disclosure
 status: proposed
-platforms: [apple, windows, gtk, core]
+platforms: [apple, windows, gtk, android, core]
 created: 2026-06-18
-updated: 2026-06-18
+updated: 2026-06-28
 ---
 
 # Settings information architecture and progressive disclosure

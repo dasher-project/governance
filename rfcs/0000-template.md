@@ -1,7 +1,7 @@
 ---
 rfc: 0000
 title: <short, descriptive title>
-status: proposed          # proposed | active | implemented | rejected | withdrawn
+status: proposed          # draft | proposed | active | implemented | rejected | withdrawn
 platforms: [apple, windows, gtk, android, web, core]   # platforms affected
 created: YYYY-MM-DD
 updated: YYYY-MM-DD

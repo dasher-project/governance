@@ -18,7 +18,7 @@ The official governance model for all the projects in the dasher project
 
 # Roles
 
-We have a identified a the following roles within the project. Each individual and organizations involved in the project acts within one of these roles.
+We have identified the following roles within the project. Each individual and organizations involved in the project acts within one of these roles.
 
 ## Project Lead
 
@@ -57,6 +57,8 @@ Dasher v6 is one **shared engine** ([DasherCore](https://github.com/dasher-proje
   - [willwade](https://github.com/willwade)
 - [Dasher-GTK](https://github.com/dasher-project/Dasher-GTK) — Linux + Win/macOS fallback (GTK4)
   - [PapeCoding](https://github.com/PapeCoding)
+- [Dasher-Android](https://github.com/dasher-project/Dasher-Android) — Android (Kotlin / Jetpack Compose) + IME
+  - [willwade](https://github.com/willwade)
 - [website](https://github.com/dasher-project/website) — [dasher.at](https://dasher.at), docs + public feature status (Astro)
   - [willwade](https://github.com/willwade), [gavinhenderson](https://github.com/gavinhenderson), [cagdasgerede](https://github.com/cagdasgerede)
 - [dasher-web](https://github.com/dasher-project/dasher-web) — in-browser WASM app
@@ -76,7 +78,7 @@ A contributor is anyone who contributes to the project. Contributions are not li
 
 Everyone is welcome as a contributor.
 
-All contributions must abide by the [Code Of Conduct](./code-of-conduct.md). Code contributions must also be signed off under the [Developer Certificate of Origin (DCO)](https://developercertificate.org/) — see the [contributor guide](https://github.com/dasher-project/.github/blob/main/CONTRIBUTING.md#developer-certificate-of-origin-dco) for details.
+All contributions must abide by the [Code Of Conduct](./code-of-conduct.md). Code contributions must also be signed off under the [Developer Certificate of Origin (DCO)](https://developercertificate.org/) — see [CONTRIBUTING.md](./CONTRIBUTING.md#developer-certificate-of-origin-dco) for details.
 
 # Funding
 
@@ -96,7 +98,7 @@ Each major decision starts as a Request for Comments (RFC). Everyone is invited 
 
 The decision making process only needs to be followed when making 'substantial' changes. Changes don't just apply to code but also architectural, product and process changes. If you are unaware if your change constitutes 'substantial' then feel free to open an RFC with minimal detail to ask before you commit to completing a full RFC.
 
-The decision making model is closely based on [Rusts RFC model](https://github.com/rust-lang/rfcs).
+The decision making model is closely based on [Rust's RFC model](https://github.com/rust-lang/rfcs).
 
 The purpose of this process is not to be absolute or be overly cumbersome. Its a simple, lightweight process to make sure everyone has their voice heard.
 

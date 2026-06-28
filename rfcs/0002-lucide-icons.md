@@ -172,7 +172,7 @@ Apple's native icon set. Excellent on Apple platforms, but:
 ### Tabler Icons
 
 - Similar to Lucide (open source, stroke-based, MIT licence).
-- Fewer icons (~4,000 vs Lucide's 1,400+, though both are large).
+- More icons (~4,000 vs Lucide's 1,400+, though both are large).
 - Less adoption / smaller community.
 - No ready-made Avalonia package.
 

@@ -10,6 +10,10 @@ amendments:
     title: "TestFlight crash reporting for Apple platforms"
     date: 2026-06-28
     issue: 13
+  - number: 2
+    title: "Engine-side exception capture at the C-API boundary"
+    date: 2026-06-28
+    issue: TBD
 ---
 
 # Crash reporting & engine diagnostics capture
@@ -202,6 +206,105 @@ For iOS and visionOS App Store releases (post-beta), TestFlight crash
 reporting is no longer available, so the PostHog handler becomes the
 primary channel again — it should be installed in the production build
 as well.
+
+## Amendment 2: Engine-side exception capture at the C-API boundary
+
+The base RFC's `engine_log_tail` is only as useful as what the engine emits.
+Today the only log emitter reached at the C-API boundary is the user-facing
+`Message()` override in `CAPI.cpp`. So when a C++ exception is thrown inside
+`dasher_frame` / `dasher_mouse_*` / `dasher_key_event` and propagates across
+`extern "C"`, the ring buffer's tail is empty or stale: the crash report
+shows where the *frontend* was, not what the engine was doing. This
+amendment makes the engine itself emit a level-3 (error) line for any C++
+exception caught at the C-API boundary, so the tail always captures
+engine-side fault context before the function returns.
+
+### Contract
+
+Every `extern "C"` entry point in `CAPI.cpp` MUST catch `std::exception`
+**and** `...`, and route the failure through `dasher_set_log_callback` at
+level 3 (respecting `logCbMinLevel`) before returning. This generalises
+DasherCore's CONTRIBUTING Rule 4 ("never throw across the boundary") with
+the explicit void-function policy: *log via the callback and return; never
+propagate.* A shared internal helper (`log_exception` / `log_error`,
+[DasherCore#34](https://github.com/dasher-project/DasherCore/issues/34)) is
+the sanctioned way to do this, so the correct path is also the lazy path.
+
+### Scope: the per-frame hot path is the priority
+
+`dasher_create` and `dasher_set_screen_size` already wrap `Realize()` in
+try/catch, and the parameter accessors are being standardised via
+[DasherCore#34](https://github.com/dasher-project/DasherCore/issues/34). The
+remaining — and most valuable — gap is the per-frame hot path: the least
+guarded and the most likely to hit engine bugs.
+
+- `dasher_frame`
+- `dasher_mouse_move`, `dasher_mouse_down`, `dasher_mouse_up`
+- `dasher_key_event`
+
+These MUST be wrapped.
+
+### Engine error state (no "carry on" after a catch)
+
+A caught exception leaves the engine in an indeterminate state; calling
+`dasher_frame` again on a half-mutated model is what turns a soft exception
+into the hard SEGV this amendment cannot catch (see below). Therefore:
+
+- `dasher_ctx` gains an internal `bool engineError` flag.
+- A new public accessor `int dasher_has_engine_error(dasher_ctx*)` exposes
+  it (`dasher_ctx` is opaque in `dasher.h`; the field cannot be read
+  directly by frontends).
+- Once set, `dasher_frame` / `dasher_mouse_*` / `dasher_key_event` MUST
+  no-op.
+- Frontend contract: on `dasher_has_engine_error()` returning true, stop
+  calling frame, surface an error dialog, then `dasher_destroy` +
+  `dasher_create`. The flag is NOT cleared by `dasher_reset`; only engine
+  recreation clears it.
+
+### What this does NOT catch (be honest in the crash report)
+
+The boundary wrapper catches C++ exceptions only: `std::bad_alloc`,
+`std::bad_variant_access`, `std::out_of_range`, `std::runtime_error` (e.g.
+`FileWordGenerator`), and any explicit `throw` in DasherCore. It does NOT
+catch:
+
+- **SEGV / SIGBUS** (null deref, use-after-free, out-of-bounds index). These
+  are signals; the per-platform signal handlers in the base RFC still own
+  this case. The `engine_log_tail` remains useful because the last
+  successful frame's logs precede the signal.
+- **Stack overflow.**
+- **`DASHER_ASSERT` in release.** Under `NDEBUG`, `DASHER_ASSERT(expr)` is
+  `((void)0)` (`DasherCore/Common/myassert.h`) — a no-op in the builds
+  shipped to users; it does not abort, so there is nothing to capture.
+  Debug-only asserts abort in CI and are out of scope. (Earlier proposals
+  to "log before `abort()` from a release DASHER_ASSERT" rested on this
+  false premise.)
+- **Exceptions from destructors during stack unwinding** invoke
+  `std::terminate` and bypass the catch entirely.
+
+### Helper hygiene
+
+Catch handlers MUST NOT throw. A `std::string` concatenation inside the
+catch that itself throws (e.g. a second `bad_alloc`) re-violates the
+boundary — and for the `void` setters there is no return to fall back on.
+The `log_exception` / `log_error` helpers MUST be `noexcept` (or
+allocation-free — fixed buffer + `snprintf`), because they are intended as
+the project-wide pattern and will be reused on the hot path.
+
+### Ring-buffer thread safety
+
+`dasher_set_log_callback` may fire on any calling thread (`dasher.h`). A
+frontend that calls `dasher_mouse_move` from an input thread and
+`dasher_frame` from a render thread can fault on both and invoke `logCb`
+concurrently. The frontend's ring buffer (base RFC §"Engine log ring
+buffer") MUST therefore be thread-safe (a lock, or an SPSC/MPSC ring).
+
+### Envelope impact
+
+No schema change to the base RFC envelope. `engine_log_tail` simply becomes
+able to contain level-3 boundary-exception lines, which it previously could
+not. PII scrubbing is unchanged — the engine does not place user-typed
+text, clipboard, or canvas contents in boundary-exception messages.
 
 ## Prior art
 

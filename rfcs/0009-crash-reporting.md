@@ -5,6 +5,11 @@ status: proposed
 platforms: [apple, windows, gtk, android, core]
 created: 2026-06-28
 updated: 2026-06-28
+amendments:
+  - number: 1
+    title: "TestFlight crash reporting for Apple platforms"
+    date: 2026-06-28
+    issue: 13
 ---
 
 # Crash reporting & engine diagnostics capture
@@ -153,6 +158,44 @@ A scrub unit test must cover each platform's path format.
   violates RFC 0001's "no canvas/typed-text" promise and inflates ingest; the
   ring-buffer-then-send-on-crash model is the right trade.
 
+## Amendment 1: TestFlight crash reporting for Apple platforms
+
+Apple platforms have a native crash-reporting channel — **TestFlight crash
+reporting** (via App Store Connect) — that is complementary to PostHog and
+requires zero code integration.
+
+### Dual-channel model
+
+| Channel | Scope | Strengths | Limitations |
+| --- | --- | --- | --- |
+| **TestFlight** | Beta builds only | Apple-symbolicated native stacks (better for DasherCore C++ frames); automatic; privacy-respected via iOS analytics toggle | Not available for App Store production releases; Apple-only; no cross-platform correlation |
+| **PostHog** | Beta + production | Cross-platform parity (same project as Windows/Android/GTK); unified with analytics events; RFC 0009 engine log tail | Requires SDK handler installation; stack symbolication is the frontend's responsibility |
+
+Both channels may be active simultaneously — they do not conflict. TestFlight
+collects at the OS level; PostHog collects at the SDK level.
+
+### Recommendation
+
+- **Beta builds (TestFlight):** Both channels active. TestFlight is the primary
+  crash-reporting surface for beta testers (better native symbolication);
+  PostHog provides the cross-platform event correlation and the engine log tail.
+- **App Store releases (production):** PostHog is the primary (and only
+  programmatic) channel. TestFlight crash data is not available for production
+  builds. Users may still share Apple's native diagnostic logs via Settings →
+  Privacy → Analytics & Improvements, but that is OS-level and outside this RFC.
+
+### What this means for the PostHog path on Apple
+
+The PostHog `crash` event envelope (`exception_type`, `stack_trace`,
+`engine_log_tail`, per this RFC) applies to the PostHog path only. TestFlight
+uses Apple's native crash-reporting format (unsymbolicated binary addresses +
+OS metadata) and is not constrained by this RFC's envelope shape.
+
+Dasher-Apple should still install the `NSSetUncaughtExceptionHandler` + signal
+handler described in the **Per-platform crash hooks** table above, so that
+PostHog receives structured crash data from both beta and production builds.
+TestFlight operates independently at the OS level.
+
 ## Prior art
 
 - **posthog-ios / posthog-dotnet / posthog-android** all have
@@ -162,6 +205,9 @@ A scrub unit test must cover each platform's path format.
   the same idea.
 - **Dasher-Windows** already implements `AppDomain.UnhandledException` +
   `engine.log`; this RFC generalises that pattern.
+- **TestFlight crash reporting** (Apple) is the platform-native equivalent —
+  available for beta builds with zero code, providing Apple-symbolicated stacks
+  that complement PostHog's structured envelope (see Amendment 1).
 
 ## Unresolved questions
 

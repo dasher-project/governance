@@ -145,6 +145,18 @@ with no test will (and should) ask.
 1. Should DasherCore grow a small shared test harness for the analytics event
    schema and the crash scrubber, so every frontend runs the same assertions
    against the same fixture set?
+
+   More broadly: **cross-frontend invariant tests on the C API contract are the
+   highest-leverage tests we have.** DasherCore's existing draw-command tests,
+   alphabet-parsing tests, and parameter-lifecycle tests catch bugs that would
+   otherwise surface as platform-specific regressions — and a bug that only
+   *manifests* on one frontend is very often a DasherCore bug that any frontend
+   could have tripped. The v5 alphabet bug is the cautionary example: it
+   appeared to be a Windows-only regression because v5 migration only runs
+   there, but the root cause (a name collision overwriting the default
+   alphabet) was in DasherCore and could have hit any frontend. Tests that
+   assert the shared invariants — independent of whichever frontend exposed
+   the symptom — are worth more than the sum of the per-frontend equivalents.
 2. Do we want CI to **report** test coverage per repo (a status check) even
    though it isn't a gate?
 3. When Apple wires `testTargets` in `project.yml`, does that count as a

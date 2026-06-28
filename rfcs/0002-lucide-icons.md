@@ -2,9 +2,9 @@
 rfc: 0002
 title: Adopt Lucide as the cross-platform icon set
 status: proposed
-platforms: [apple, windows, gtk]
+platforms: [apple, windows, gtk, android]
 created: 2026-06-17
-updated: 2026-06-17
+updated: 2026-06-28
 ---
 
 # Adopt Lucide as the cross-platform icon set

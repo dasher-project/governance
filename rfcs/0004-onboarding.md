@@ -2,9 +2,9 @@
 rfc: 0004
 title: First-run onboarding experience
 status: proposed
-platforms: [apple, windows, gtk, core]
+platforms: [apple, windows, gtk, android, core]
 created: 2026-06-17
-updated: 2026-06-17
+updated: 2026-06-28
 ---
 
 # First-run onboarding experience

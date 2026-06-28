@@ -2,9 +2,9 @@
 rfc: 0003
 title: Multilingual UI support across all frontends
 status: proposed
-platforms: [apple, windows, gtk, core]
+platforms: [apple, windows, gtk, android, core]
 created: 2026-06-17
-updated: 2026-06-17
+updated: 2026-06-28
 ---
 
 # Multilingual UI support across all frontends

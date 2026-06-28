@@ -2,9 +2,9 @@
 rfc: 0001
 title: Privacy-preserving analytics and crash reporting
 status: proposed
-platforms: [apple, windows, gtk]
+platforms: [apple, windows, gtk, android]
 created: 2026-06-17
-updated: 2026-06-17
+updated: 2026-06-28
 ---
 
 # Privacy-preserving analytics and crash reporting

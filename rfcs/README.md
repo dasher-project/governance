@@ -19,6 +19,13 @@ The process is closely based on [Rust's RFC model](https://github.com/rust-lang/
 6. After **at least 7 days**, maintainers + stewards reach consensus and the RFC
    is marked `active` (accepted) or `rejected`.
 
+> **Testing (per [RFC 0011](./0011-testing.md)).** Every RFC includes a short
+> `Testing` section stating whether the change is testable automatically, by
+> manual verification, or both — and where the tests live. "Manual verification
+> only" is valid. This is **expected, not a hard gate**: a thin or missing test
+> plan does not block `active`, but reviewers will ask about it. Privacy,
+> data-egress, and correctness claims should name the test that asserts them.
+
 ## RFC statuses
 
 | Status | Meaning |
@@ -45,3 +52,4 @@ The process is closely based on [Rust's RFC model](https://github.com/rust-lang/
 | [0008](./0008-keyboard-onboarding.md) | Keyboard extension / IME onboarding (Apple & Android) | proposed | apple, android, core |
 | [0009](./0009-crash-reporting.md) | Crash reporting & engine diagnostics capture | proposed | apple, windows, gtk, android, core |
 | [0010](./0010-input-access-methods.md) | Input & access methods (steering/selection/dwell/switch/eye-gaze/joystick) | draft | apple, windows, gtk, android, core |
+| [0011](./0011-testing.md) | Testing expectations for RFCs | proposed | apple, windows, gtk, android, web, core |

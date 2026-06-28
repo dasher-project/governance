@@ -42,6 +42,26 @@ What other approaches did you consider, and why is this one better?
 
 Other apps, previous Dasher versions, or other projects that have solved this.
 
+## Testing
+
+Per [RFC 0011](./0011-testing.md): say whether the change is testable
+automatically, by manual verification, or both, and where the tests live.
+
+- Is this change testable automatically, by manual verification, or both?
+- For automated tests: which repo(s) and path(s) hold them? (See the repo map
+  in [RFC 0011](./0011-testing.md).) Shared invariants ideally land in
+  DasherCore's `tests/`; frontend-specific behaviour lands in the frontend's
+  test target.
+- For privacy, data-egress, security, or correctness claims made elsewhere in
+  this RFC: name the test that asserts the claim (e.g. a scrubber test, a
+  "no-typed-text-in-payload" schema test).
+- If there are no automated tests, say why and how a reviewer verifies the
+  change (e.g. a manual run-through, a screenshot, a UX step).
+
+"Manual verification only" is a legitimate answer; the point is that the choice
+is written down. A missing test plan does not block an RFC from going `active`,
+but reviewers are expected to ask about it.
+
 ## Unresolved questions
 
 What do you want input on before this is finalised?

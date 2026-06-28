@@ -186,15 +186,22 @@ collects at the OS level; PostHog collects at the SDK level.
 
 ### What this means for the PostHog path on Apple
 
-The PostHog `crash` event envelope (`exception_type`, `stack_trace`,
-`engine_log_tail`, per this RFC) applies to the PostHog path only. TestFlight
-uses Apple's native crash-reporting format (unsymbolicated binary addresses +
-OS metadata) and is not constrained by this RFC's envelope shape.
+TestFlight handles crash reporting for iOS and visionOS beta builds
+automatically at the OS level — no SDK handler is needed for those
+platforms during beta testing.
 
-Dasher-Apple should still install the `NSSetUncaughtExceptionHandler` + signal
-handler described in the **Per-platform crash hooks** table above, so that
-PostHog receives structured crash data from both beta and production builds.
-TestFlight operates independently at the OS level.
+The PostHog `crash` event envelope (`exception_type`, `stack_trace`,
+`engine_log_tail`, per this RFC) is needed on **macOS**, where the app
+is distributed **outside the Mac App Store** (direct download, not
+sandboxed, not on TestFlight). macOS has no Apple-native crash-reporting
+channel for non-App-Store apps, so PostHog is the sole crash-reporting
+path there. DasherMac should install `NSSetUncaughtExceptionHandler`
+and a signal handler to capture crashes into the PostHog pipeline.
+
+For iOS and visionOS App Store releases (post-beta), TestFlight crash
+reporting is no longer available, so the PostHog handler becomes the
+primary channel again — it should be installed in the production build
+as well.
 
 ## Prior art
 

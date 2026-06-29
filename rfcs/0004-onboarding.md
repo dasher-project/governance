@@ -4,7 +4,7 @@ title: First-run onboarding experience
 status: proposed
 platforms: [apple, windows, gtk, android, core]
 created: 2026-06-17
-updated: 2026-06-28
+updated: 2026-06-29
 ---
 
 # First-run onboarding experience
@@ -16,10 +16,12 @@ the initial experience as "sea-sickness inducing" (per the design guide §1).
 No v6 frontend implements any onboarding; all three launch directly into the
 live editor. The design guide §8 defines an aspirational scaffolded flow
 (welcome → input handshake → first zoom challenge → progress dashboard), and
-DasherCore has a functional Game Mode engine (`CGameModule`) plus a disabled
-Demo Filter (`CDemoFilter`). This RFC frames the onboarding problem, documents
-what exists, identifies the design questions that need **UX expert input**, and
-proposes a phased implementation plan.
+DasherCore has a functional Game Mode engine (`CGameModule`) and a disabled
+Demo Filter (`CDemoFilter`) — **however `CDemoFilter` has since been removed
+from DasherCore** (commit `f79eb6a9`, Jun 2026; it had been disabled since 2007
+due to segfaults and was never re-enabled). This RFC frames the onboarding
+problem, documents what exists, identifies the design questions that need
+**UX expert input**, and proposes a phased implementation plan.
 
 ## Motivation
 
@@ -53,10 +55,14 @@ frontends can enter it via a toolbar/footer button, and DasherCore's
 But it's user-invoked at any time — never triggered on first launch, and not
 part of any guided sequence.
 
-**CDemoFilter** ("Demo Mode (no input)") is an automated cursor driver in
-DasherCore that could show users how Dasher works without requiring them to
-control it. However, it is **disabled in every frontend** due to segfaults
-(commented out in `DasherInterfaceBase.cpp`).
+**CDemoFilter** ("Demo Mode (no input)") was an automated cursor driver that
+could show users how Dasher works without requiring them to control it. It is
+**no longer in DasherCore** — removed in commit `f79eb6a9` (Jun 2026) after
+being disabled since 2007 due to segfaults. The three `LP_DEMO_*` parameters
+that drove it were removed at the same time. Whether onboarding needs a passive
+"watch how it works" step at all — and if so what serves it best — is a **UX
+research question**, not a foregone conclusion (see "DasherCore changes
+needed" below).
 
 ### What the design guide proposes (§8)
 
@@ -232,14 +238,21 @@ If UX research (Q3) determines that per-method guidance is needed:
 
 ### DasherCore changes needed
 
-| Feature | Status | What's needed |
+> **Research-led caveat.** The table below inventories what exists today and
+> what *might* be required. It is **not a build spec.** The onboarding design —
+> including whether Game Mode is the right practice vehicle at all, and whether
+> any passive demonstration (the old `CDemoFilter` concept) is even needed — is
+> an **output of the UX research** (RFC 0004's reason for being). The research
+> may well propose a mechanism that replaces or bypasses several rows here.
+
+| Feature | Status | What might be needed (pending research) |
 | --- | --- | --- |
-| `CGameModule` (target text, progress, arrow) | Functional | Expose target text, progress metrics via C API for frontend dashboards |
-| `CDemoFilter` (auto-cursor demo) | Disabled (segfaults) | Fix crashes, re-enable as "watch how it works" step |
-| Sibling suppression | Not implemented | New boolean parameter (e.g. `BP_BEGINNER_MODE`) that hides child nodes |
-| Path correction arrow | Partial (GameModule has a help arrow) | Generalise: make available outside Game Mode, add dynamic fade behaviour |
-| Auto-speed ramp | `BP_AUTO_SPEEDCONTROL` exists | Evaluate whether it's sufficient for onboarding or needs a dedicated ramp parameter |
-| Progress metrics (WPM, accuracy) | Not exposed | New C API calls for onboarding dashboards |
+| `CGameModule` (target text, progress, arrow) | Functional | *Hypothesis:* a guided game-mode sequence is the practice vehicle. To validate: expose target text / progress via C API for prototype dashboards. Research may propose something different. |
+| Passive "watch how it works" demo | **Removed** (`CDemoFilter` deleted in `f79eb6a9`; disabled since 2007) | Only if research shows a passive step helps. Options: a pre-recorded video clip (no engine work), or a fresh auto-driver built to the current codebase. The old filter is **not** to be resurrected. |
+| Sibling suppression | Not implemented | New boolean parameter (e.g. `BP_BEGINNER_MODE`) that hides child nodes — if research validates a beginner mode. |
+| Path correction arrow | Partial (GameModule has a help arrow) | Generalise only if the chosen design needs it outside Game Mode. |
+| Auto-speed ramp | `BP_AUTO_SPEEDCONTROL` exists | Evaluate whether it's sufficient for onboarding or needs a dedicated ramp parameter. |
+| Progress metrics (WPM, accuracy) | Not exposed | New C API calls — only if the validated design includes a dashboard. |
 
 ### Per-platform implementation
 
@@ -273,8 +286,11 @@ If UX research (Q3) determines that per-method guidance is needed:
   localisation (RFC 0003) and updates as the product evolves.
 - **Risk of over-engineering.** A simple "welcome + practice mode" might be 80%
   as effective as a full guided sequence. Need to avoid gold-plating.
-- **CDemoFilter may be hard to fix.** It's been disabled for a reason (segfaults).
-  If the demo mode is valuable for onboarding, someone needs to debug it.
+- **Lock-in risk if we pre-commit to a mechanism.** Reimplementing something like
+  `CDemoFilter`, or assuming the current Game Mode is the practice vehicle, would
+  bake in today's assumptions. The point of the UX research is that it may propose
+  a better mechanism; the engineering choice should follow the evidence, not lead
+  it.
 
 ## Alternatives considered
 
@@ -315,8 +331,10 @@ real Dasher canvas — a web simulation wouldn't reflect their setup.
 
 1. **UX expert engagement** — Who do we engage, and what's the budget? Is this
    a pro-bono advisory role or a paid consultation?
-2. **CDemoFilter** — Is fixing it worth the effort, or should onboarding use
-   Game Mode exclusively?
+2. **Is a passive demonstration step needed at all?** If the UX research says
+   yes, is it best served by a short video clip (no engine work), a fresh
+   auto-driver built to the current codebase, or by going straight into guided
+   practice? This is a research output, not an engineering decision.
 3. **Beginner mode persistence** — Should sibling suppression and path
    correction be a first-run-only thing, or a persistent accessibility setting
    (beginner mode toggle)?

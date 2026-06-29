@@ -4,332 +4,202 @@ title: Crash reporting & engine diagnostics capture
 status: proposed
 platforms: [apple, windows, gtk, android, core]
 created: 2026-06-28
-updated: 2026-06-28
-amendments:
-  - number: 1
-    title: "TestFlight crash reporting for Apple platforms"
-    date: 2026-06-28
-    issue: 13
-  - number: 2
-    title: "Engine-side exception capture at the C-API boundary"
-    date: 2026-06-28
-    issue: TBD
+updated: 2026-06-29
 ---
 
 # Crash reporting & engine diagnostics capture
 
 ## Summary
 
-Define a single, cross-platform contract for capturing crashes and engine
-diagnostics so that a crash report reaching PostHog (per [RFC 0001][1]) is
-**useful** — it must contain the exception, a sanitised stack trace, and the
-last few seconds of **engine diagnostic log lines** so a maintainer can
-reconstruct what DasherCore was doing when it died. This RFC depends on the
-DasherCore C API `dasher_set_log_callback` (added v0.1.3, RFC 0007-adjacent)
-which made the engine's former `CFileLogger`/`CBasicLog`/`UserLog` systems
-available to frontends as a stream of `(level, message)` events.
+When Dasher crashes, send a useful report to PostHog (under RFC 0001's opt-in
+analytics): the exception type, a scrubbed stack trace, and the last few
+seconds of **engine diagnostic logs** so a maintainer can see what DasherCore
+was doing when it died. Reports are sent as a PostHog **`$exception`** (Error
+Tracking) on the **next launch**, from a small crash file written at crash
+time — never from the crashing process itself.
 
-This RFC extends [RFC 0001][1] (which left crash detail as an unresolved
-question) and is the authoritative spec for the `crash` event.
+This extends RFC 0001, which left crash detail open. Reference implementation:
+**Dasher-Windows**; macOS implemented; iOS/visionOS (production), GTK, and
+Android pending.
 
-[1]: ./0001-analytics.md
+## The contract
 
-## Motivation
+### Event: PostHog `$exception` via `captureException`
 
-- Dasher is a beta. Crashes matter. RFC 0001 specified *that* we capture crashes
-  and the event name, but not *how* each platform hooks its uncaught-exception
-  path, *what* goes in `stack_trace`, or how to capture engine-side context.
-- Today the platforms are inconsistent: Windows wires
-  `AppDomain.UnhandledException` → PostHog; Apple stubs it (no uncaught handler
-  installed); GTK proposes signal handlers; Android has nothing. The result is
-  that most crash reports we do get are thin (no engine state), and Android — a
-  fast-growing install base — produces no crash data at all.
-- The engine now exposes a single diagnostic channel (`dasher_set_log_callback`,
-  `dasher.h`) carrying levelled log lines (0 debug / 1 info / 2 warn / 3 error).
-  Capturing the **last N** of these into a ring buffer gives every crash report a
-  "what was the engine doing" tail — invaluable for diagnosing assert-failures
-  and bad-parameter crashes that originate in DasherCore rather than the
-  frontend.
+Every frontend sends crashes through `PostHog.captureException(...)`, producing
+a PostHog **`$exception`** event in the **Error Tracking** product (grouping,
+trends, fingerprinting). Do **not** send a custom `capture("crash", …)` event —
+it will not appear in Error Tracking.
 
-## Detailed design
-
-### The crash report envelope
-
-Every crash report is a single PostHog `crash` event with this shape (extends
-RFC 0001's table):
-
-| Field | Source | Notes |
+| Property | Source | Notes |
 | --- | --- | --- |
-| `platform` | frontend | `apple` / `windows` / `gtk` / `android` |
-| `app_variant` | frontend | e.g. `dasher-android`, `dasher-apple-ios` |
-| `app_version` | build | semver |
-| `os_version` | OS | e.g. `Android 15`, `iOS 26.5`, `Windows 11 22631` |
-| `locale` | engine | `dasher_get_locale` (already sent with analytics) |
-| `exception_type` | uncaught handler | e.g. `java.lang.IllegalStateException`, `EXC_BAD_ACCESS`, `System.NullReferenceException` |
-| `stack_trace` | uncaught handler | **PII-scrubbed** (see below) |
+| `exception_type` | handler / reconstructed | e.g. `System.NullReferenceException`, `NSGenericException`, `UncleanShutdown` |
+| `stack_trace` | handler / saved | PII-scrubbed; the **saved** stack (PostHog won't have the original at send time) |
 | `engine_log_tail` | log ring buffer | last N `(level, message)` lines from `dasher_set_log_callback` |
-| `signal_or_reason` | handler | e.g. `SIGSEGV`, `Aborting: DASHER_ASSERT` |
+| `source` | handler | capture hook, e.g. `AppDomain.UnhandledException`, `NSSetUncaughtExceptionHandler`, `unclean_shutdown` |
+| `platform`, `app_variant`, `app_version`, `os_version` | SDK defaults | attached automatically by `captureException` |
 
-The `engine_log_tail` is the new, unifying piece: every frontend keeps a small
-in-process ring buffer of the most recent engine log lines (recommended size:
-**64 lines, capped at 8 KB total**) and appends it to the crash event.
+`distinctId`: `captureException` resolves it from SDK storage, so call
+`PostHog.identify(distinctId)` after setup so crashes attribute to the same
+anonymous ID as analytics events.
 
-### Per-platform crash hooks
+### Deferred send (never call the SDK from a crashing process)
 
-| Platform | Hook | Notes |
-| --- | --- | --- |
-| **Android** | `Thread.setDefaultUncaughtExceptionHandler` (JVM) **+** a native `sigaction(SIGSEGV/SIGABRT/SIGILL)` shim for JNI/engine crashes | The JVM handler catches Kotlin/Java throws; the signal shim catches crashes inside `libdasher.so`. Pipe the latter via a `sigwait`-or-`abort` trampoline that writes a minidump line + the ring buffer to a crash file before re-raising. |
-| **Apple** | `signal(SIGABRT/...)` + `NSExceptionExceptionHandler` (NSSetUncaughtExceptionHandler) | Capture `callStackSymbols`; write to App Group container; flush on next launch (a crashing process can't safely do network). |
-| **Windows (.NET)** | `AppDomain.CurrentDomain.UnhandledException` + `TaskScheduler.UnobservedTaskException` | Already implemented in Dasher-Windows; align fields to this envelope. |
-| **GTK** | `signal(SIGSEGV/SIGABRT)` + `std::set_terminate` | async-signal-safe path writes the buffer to disk; flush on next launch. |
+At crash time, write a small **crash file** synchronously (no heap allocation,
+no network). On the **next launch**: read it, reconstruct a throwable (Windows:
+`SavedCrashException`; macOS: an `NSError` built from the saved type/reason),
+call `captureException`, then delete the file.
 
-**Crash-time discipline.** Inside an uncaught handler you must **not** do work
-that can itself crash (no heap allocation, no network, no PostHog SDK calls in
-the crashing thread). The handler writes a small **crash file** to the app's
-private storage containing the envelope; on the **next launch**, the app
-detects the crash file, sends the `crash` event via the normal PostHog SDK
-path, and deletes it.
+**Crash file format** (shared shape, pioneered by Windows):
 
-### Engine log ring buffer (shared pattern)
+```
+exception_type=<full type name>
+source=<capture hook>
 
-Each frontend, at engine creation, registers a log callback that:
+<stack trace>
 
-1. Routes lines to the platform log (Android `Log` / Apple `os_log` / Windows
-   `Debug`+`engine.log` / GTK `g_log`) — **already done** in Dasher-Android
-   (→ logcat, `DasherEngine.installEngineCallbacks`) and Dasher-Windows.
-2. Appends `(level, message, monotonic_ms)` to a fixed-capacity ring buffer.
-3. The crash handler snapshots the ring buffer into the crash file.
+--- engine log ---
+<engine_log_tail>
+```
 
-Levels are filtered per RFC 0007's `dasher_set_log_callback(ctx, cb, user, min_level)`
-argument. For the ring buffer, capture at `min_level = 1` (info) by default —
-debug (0) is too noisy to keep around for a crash, but info+warnings+errors
-reconstruct the sequence. A **diagnostic mode** (Settings → Privacy →
-"Send verbose logs with crash reports") lowers this to 0 for users who opt in to
-helping diagnose a specific issue.
+A different on-disk encoding is acceptable (macOS uses JSON) provided the
+resulting `$exception` carries the same properties.
 
-### PII scrubbing
+### Engine log ring buffer
 
-Crash reports can leak via stack traces (file paths containing usernames —
-`/Users/jane/…`, `C:\Users\bob\…`, `/data/data/at.dasher.android/…` is fine) and
-via the engine log tail if a log line ever included user text. The schema
-guarantees (RFC 0001) that **typed text, clipboard, canvas contents, training
-text** are never collected, and the engine's `Message()` callback (the only
-current log emitter in `CAPI.cpp`) routes user-facing strings but not raw typed
-text. Even so, scrubbers **must** run before the envelope is written:
+Each frontend registers `dasher_set_log_callback` at engine creation and
+appends each line to a fixed-capacity ring buffer (recommended **64 lines /
+8 KB**), mirrored to an `engine.log` file so it survives a hard crash. Capture
+at `min_level = 1` (info) by default; a future "verbose logs" opt-in may lower
+this to 0.
 
-- Home-directory path segments → `<user>` (`/Users/<user>/`, `C:\Users\<user>\`,
+### Opt-in gate & retention
+
+No crash is sent unless the user opted into analytics (RFC 0001). The crash
+file is still written if not opted in, but is never transmitted; it is
+discarded after **7 days**. On send failure (offline), retry up to **3**
+launches, then discard.
+
+### PII scrubbing (before anything leaves the device)
+
+- Home-directory segments → `<user>` (`/Users/<user>/`, `C:\Users\<user>\`,
   `/home/<user>/`).
 - Email-shaped strings → `<email>`.
-- Truncate `stack_trace` to 16 KB and `engine_log_tail` to 8 KB.
-- Hard cap the whole envelope at 32 KB; truncate the tail first if exceeded.
+- Truncate `stack_trace` → 16 KB and `engine_log_tail` → 8 KB; hard-cap the
+  envelope at 32 KB (truncate the tail first).
 
-A scrub unit test must cover each platform's path format.
+The engine never places typed text, clipboard, or canvas contents in log lines
+(RFC 0001); scrubbers are defence-in-depth.
 
-### When to send
+## Per-platform implementation
 
-- **Opt-in gate.** No crash event is sent unless the user has opted in to
-  analytics (RFC 0001). If the user has *not* opted in, the crash file is still
-  written (cheap, local) but **never transmitted**; it is deleted after 7 days or
-  on opt-out.
-- **First launch after crash.** Detect the crash file, send, delete. If the send
-  fails (offline), retry on subsequent launches up to 3 times, then discard.
+| Platform | Hook | Status |
+| --- | --- | --- |
+| **Windows** | `AppDomain.UnhandledException` + `TaskScheduler.UnobservedTaskException` → crash file → next-launch `CaptureException(SavedCrashException)` | ✅ Done (Dasher-Windows #17) — **reference** |
+| **macOS** | `NSSetUncaughtExceptionHandler` + an **alive-marker** unclean-shutdown detector → crash file → next-launch `captureException(NSError)`. Sole channel (non-App-Store app, no TestFlight). | ✅ Done (Dasher-Apple #20) |
+| **iOS / visionOS** | **TestFlight** for beta; production build installs the PostHog `$exception` path (same as macOS) | ⏳ Pending |
+| **GTK** | `signal(SIGSEGV/SIGABRT)` + `std::set_terminate` → crash file → next launch | ⏳ Pending |
+| **Android** | `Thread.setDefaultUncaughtExceptionHandler` (JVM) + a native `sigaction` shim for `libdasher.so` crashes | ⏳ Pending |
+
+**Why macOS uses an alive-marker instead of raw signal handlers.** Swift signal
+handlers cannot safely do capture work (async-signal-safety), so macOS writes
+an `alive.marker` at launch (cleared on a clean quit); its presence at the next
+launch means an unclean shutdown, reported as
+`exception_type = UncleanShutdown` with the engine tail. This catches
+`fatalError`/SIGSEGV that `NSSetUncaughtExceptionHandler` misses. (Raising an
+`NSException` from pure Swift is unreliable and does not reach the handler.)
+
+## Engine side (DasherCore)
+
+DasherCore v0.1.6 makes the engine a first-party participant:
+
+- **Boundary exception capture.** Every `extern "C"` entry point in `CAPI.cpp`
+  catches `std::exception` + `...`, routes the failure through
+  `dasher_set_log_callback` at level 3 (error), and returns — it never
+  propagates across the boundary (generalises CONTRIBUTING Rule 4;
+  [DasherCore#34](https://github.com/dasher-project/DasherCore/issues/34),
+  fixed in #35). The per-frame hot path (`dasher_frame`, `dasher_mouse_*`,
+  `dasher_key_event`) is wrapped (#38). So a boundary exception always appears
+  in `engine_log_tail`.
+- **Engine error state.** A caught exception sets an internal `engineError`
+  flag, exposed via `int dasher_has_engine_error(dasher_ctx*)`. Once set, the
+  hot path no-ops. **Frontend contract:** on `dasher_has_engine_error()` → stop
+  calling frame, surface a message, then `dasher_destroy` + `dasher_create` (or
+  ask the user to relaunch). `dasher_reset` does **not** clear it; only engine
+  recreation does.
+- **What this does NOT catch:** SEGV/SIGBUS (signals — owned by the per-platform
+  handlers/unclean-marker), stack overflow, `DASHER_ASSERT` under `NDEBUG` (a
+  no-op in release), and exceptions from destructors (`std::terminate`).
+
+## Apple: TestFlight + PostHog (dual channel)
+
+| Channel | Scope | Best for |
+| --- | --- | --- |
+| **TestFlight** | Beta builds | Apple-symbolicated native stacks (DasherCore C++ frames); automatic |
+| **PostHog `$exception`** | Beta + production | Cross-platform parity; engine log tail; unified with analytics |
+
+Both may be active simultaneously. **macOS** has no TestFlight (direct download)
+— PostHog is the sole channel there. iOS/visionOS betas lean on TestFlight;
+**production** iOS/visionOS uses the PostHog path.
+
+## Out of scope (stated honestly)
+
+- **Native stack symbolication in PostHog.** `captureException` carries the
+  *captured* stack only (managed / Swift / Obj-C frames). It does **not**
+  symbolicate native SIGSEGV/SIGABRT frames. For those, rely on OS crash logs
+  (macOS `.ips`, the Windows crash dialog) shared manually by the user, or a
+  future dedicated crash SDK.
+- **A second vendor (Sentry / Crashlytics / Bugsnag).** Rejected for v6's
+  PostHog-only, single-vendor, open-source model.
 
 ## Drawbacks
 
-- **Signal handlers and uncaught-exception handlers are inherently risky** to
-  run inside a crashing process. The "write a tiny file and re-raise" pattern
-  minimises this but is not free; a handler that itself crashes can wedge the
-  app. Mitigation: keep the handler path trivial and crash-tested.
-- **Native (JNI/.so) crashes on Android** are the hardest case; a JVM
-  `UncaughtExceptionHandler` will not see a SIGSEGV in `libdasher.so`. The
-  signal shim is extra complexity and must be re-tested per NDK/AGP version.
-- **Verbose logs → crash size.** Allowing `min_level = 0` (debug) bloats the
-  envelope; opt-in only and hard cap is essential.
-- **Privacy optics.** Sending *any* log tail with a crash may worry users even
-  with scrubbing. The privacy policy and the Settings copy must be explicit.
+- Uncaught-exception / signal handlers are inherently risky inside a crashing
+  process — hence the "write a tiny file and re-raise" discipline.
+- Native (`libdasher.so` / JNI) crashes on Android are the hardest case; the
+  signal shim is extra complexity.
+- Collecting *any* log tail with a crash has privacy optics — the privacy
+  policy and Settings copy must be explicit.
 
 ## Alternatives considered
 
-- **Crash-only SDK (Sentry / Crashlytics / Bugsnag).** Removes the per-platform
-  handler work; gives better native stack symbolication. Cost: another network
-  dependency, another vendor, possibly a different retention posture. RFC 0001's
-  "alternatives" section already considered this; this RFC keeps the PostHog-only
-  model but a future RFC could revisit a dedicated crash tool for native stacks.
-- **No engine log tail** (stack trace only). Rejected: the assert failures and
-  bad-parameter paths inside DasherCore are exactly the crashes that need engine
-  context to diagnose.
-- **Stream all logs to PostHog continuously** (not just on crash). Rejected:
-  violates RFC 0001's "no canvas/typed-text" promise and inflates ingest; the
-  ring-buffer-then-send-on-crash model is the right trade.
-
-## Amendment 1: TestFlight crash reporting for Apple platforms
-
-Apple platforms have a native crash-reporting channel — **TestFlight crash
-reporting** (via App Store Connect) — that is complementary to PostHog and
-requires zero code integration.
-
-### Dual-channel model
-
-| Channel | Scope | Strengths | Limitations |
-| --- | --- | --- | --- |
-| **TestFlight** | Beta builds only | Apple-symbolicated native stacks (better for DasherCore C++ frames); automatic; privacy-respected via iOS analytics toggle | Not available for App Store production releases; Apple-only; no cross-platform correlation |
-| **PostHog** | Beta + production | Cross-platform parity (same project as Windows/Android/GTK); unified with analytics events; RFC 0009 engine log tail | Requires SDK handler installation; stack symbolication is the frontend's responsibility |
-
-Both channels may be active simultaneously — they do not conflict. TestFlight
-collects at the OS level; PostHog collects at the SDK level.
-
-### Recommendation
-
-- **Beta builds (TestFlight):** Both channels active. TestFlight is the primary
-  crash-reporting surface for beta testers (better native symbolication);
-  PostHog provides the cross-platform event correlation and the engine log tail.
-- **App Store releases (production):** PostHog is the primary (and only
-  programmatic) channel. TestFlight crash data is not available for production
-  builds. Users may still share Apple's native diagnostic logs via Settings →
-  Privacy → Analytics & Improvements, but that is OS-level and outside this RFC.
-
-### What this means for the PostHog path on Apple
-
-TestFlight handles crash reporting for iOS and visionOS beta builds
-automatically at the OS level — no SDK handler is needed for those
-platforms during beta testing.
-
-The PostHog `crash` event envelope (`exception_type`, `stack_trace`,
-`engine_log_tail`, per this RFC) is needed on **macOS**, where the app
-is distributed **outside the Mac App Store** (direct download, not
-sandboxed, not on TestFlight). macOS has no Apple-native crash-reporting
-channel for non-App-Store apps, so PostHog is the sole crash-reporting
-path there. DasherMac should install `NSSetUncaughtExceptionHandler`
-and a signal handler to capture crashes into the PostHog pipeline.
-
-For iOS and visionOS App Store releases (post-beta), TestFlight crash
-reporting is no longer available, so the PostHog handler becomes the
-primary channel again — it should be installed in the production build
-as well.
-
-## Amendment 2: Engine-side exception capture at the C-API boundary
-
-The base RFC's `engine_log_tail` is only as useful as what the engine emits.
-Today the only log emitter reached at the C-API boundary is the user-facing
-`Message()` override in `CAPI.cpp`. So when a C++ exception is thrown inside
-`dasher_frame` / `dasher_mouse_*` / `dasher_key_event` and propagates across
-`extern "C"`, the ring buffer's tail is empty or stale: the crash report
-shows where the *frontend* was, not what the engine was doing. This
-amendment makes the engine itself emit a level-3 (error) line for any C++
-exception caught at the C-API boundary, so the tail always captures
-engine-side fault context before the function returns.
-
-### Contract
-
-Every `extern "C"` entry point in `CAPI.cpp` MUST catch `std::exception`
-**and** `...`, and route the failure through `dasher_set_log_callback` at
-level 3 (respecting `logCbMinLevel`) before returning. This generalises
-DasherCore's CONTRIBUTING Rule 4 ("never throw across the boundary") with
-the explicit void-function policy: *log via the callback and return; never
-propagate.* A shared internal helper (`log_exception` / `log_error`,
-[DasherCore#34](https://github.com/dasher-project/DasherCore/issues/34)) is
-the sanctioned way to do this, so the correct path is also the lazy path.
-
-### Scope: the per-frame hot path is the priority
-
-`dasher_create` and `dasher_set_screen_size` already wrap `Realize()` in
-try/catch, and the parameter accessors are being standardised via
-[DasherCore#34](https://github.com/dasher-project/DasherCore/issues/34). The
-remaining — and most valuable — gap is the per-frame hot path: the least
-guarded and the most likely to hit engine bugs.
-
-- `dasher_frame`
-- `dasher_mouse_move`, `dasher_mouse_down`, `dasher_mouse_up`
-- `dasher_key_event`
-
-These MUST be wrapped.
-
-### Engine error state (no "carry on" after a catch)
-
-A caught exception leaves the engine in an indeterminate state; calling
-`dasher_frame` again on a half-mutated model is what turns a soft exception
-into the hard SEGV this amendment cannot catch (see below). Therefore:
-
-- `dasher_ctx` gains an internal `bool engineError` flag.
-- A new public accessor `int dasher_has_engine_error(dasher_ctx*)` exposes
-  it (`dasher_ctx` is opaque in `dasher.h`; the field cannot be read
-  directly by frontends).
-- Once set, `dasher_frame` / `dasher_mouse_*` / `dasher_key_event` MUST
-  no-op.
-- Frontend contract: on `dasher_has_engine_error()` returning true, stop
-  calling frame, surface an error dialog, then `dasher_destroy` +
-  `dasher_create`. The flag is NOT cleared by `dasher_reset`; only engine
-  recreation clears it.
-
-### What this does NOT catch (be honest in the crash report)
-
-The boundary wrapper catches C++ exceptions only: `std::bad_alloc`,
-`std::bad_variant_access`, `std::out_of_range`, `std::runtime_error` (e.g.
-`FileWordGenerator`), and any explicit `throw` in DasherCore. It does NOT
-catch:
-
-- **SEGV / SIGBUS** (null deref, use-after-free, out-of-bounds index). These
-  are signals; the per-platform signal handlers in the base RFC still own
-  this case. The `engine_log_tail` remains useful because the last
-  successful frame's logs precede the signal.
-- **Stack overflow.**
-- **`DASHER_ASSERT` in release.** Under `NDEBUG`, `DASHER_ASSERT(expr)` is
-  `((void)0)` (`DasherCore/Common/myassert.h`) — a no-op in the builds
-  shipped to users; it does not abort, so there is nothing to capture.
-  Debug-only asserts abort in CI and are out of scope. (Earlier proposals
-  to "log before `abort()` from a release DASHER_ASSERT" rested on this
-  false premise.)
-- **Exceptions from destructors during stack unwinding** invoke
-  `std::terminate` and bypass the catch entirely.
-
-### Helper hygiene
-
-Catch handlers MUST NOT throw. A `std::string` concatenation inside the
-catch that itself throws (e.g. a second `bad_alloc`) re-violates the
-boundary — and for the `void` setters there is no return to fall back on.
-The `log_exception` / `log_error` helpers MUST be `noexcept` (or
-allocation-free — fixed buffer + `snprintf`), because they are intended as
-the project-wide pattern and will be reused on the hot path.
-
-### Ring-buffer thread safety
-
-`dasher_set_log_callback` may fire on any calling thread (`dasher.h`). A
-frontend that calls `dasher_mouse_move` from an input thread and
-`dasher_frame` from a render thread can fault on both and invoke `logCb`
-concurrently. The frontend's ring buffer (base RFC §"Engine log ring
-buffer") MUST therefore be thread-safe (a lock, or an SPSC/MPSC ring).
-
-### Envelope impact
-
-No schema change to the base RFC envelope. `engine_log_tail` simply becomes
-able to contain level-3 boundary-exception lines, which it previously could
-not. PII scrubbing is unchanged — the engine does not place user-typed
-text, clipboard, or canvas contents in boundary-exception messages.
+- **Sentry / Crashlytics / Bugsnag** — better native symbolication, but a
+  second vendor; rejected for the PostHog-only model.
+- **No engine log tail** (stack trace only) — rejected; engine-side faults are
+  exactly the crashes that need engine context.
+- **Stream all logs to PostHog continuously** — rejected; violates RFC 0001's
+  no-typed-text promise and inflates ingest.
 
 ## Prior art
 
-- **posthog-ios / posthog-dotnet / posthog-android** all have
-  `captureException`/automatic-capture modes; this RFC aligns the envelope and
-  adds the engine tail they don't have.
-- **Firefox/Sentry** capture a "breadcrumb" tail — the engine log ring buffer is
-  the same idea.
-- **Dasher-Windows** already implements `AppDomain.UnhandledException` +
-  `engine.log`; this RFC generalises that pattern.
-- **TestFlight crash reporting** (Apple) is the platform-native equivalent —
-  available for beta builds with zero code, providing Apple-symbolicated stacks
-  that complement PostHog's structured envelope (see Amendment 1).
+- PostHog SDKs' `captureException` / automatic capture; this RFC adds the engine
+  tail they lack.
+- Firefox / Sentry "breadcrumbs" — the engine log ring buffer is the same idea.
+- Dasher-Windows (#17) is the reference implementation.
+
+## Testing
+
+Per [RFC 0011](./0011-testing.md). Defence-in-depth claims should name a test:
+
+- **PII scrubbing** — a unit test per platform asserting home-dir/email redaction
+  and size caps (macOS: `CrashReporter.Scrubber`; Windows: equivalent).
+- **Crash-file round-trip** — write → parse → reconstructed throwable (Windows
+  `FlushPendingCrash`; macOS `sendPendingCrashIfNeeded`).
+- **Engine side** — DasherCore `tests/` covers boundary capture and
+  `dasher_has_engine_error` (v0.1.6).
+- **End-to-end** — manual: trigger a crash (debug hook or `kill -ABRT`), relaunch,
+  confirm a `$exception` lands in PostHog Error Tracking. Verified on macOS.
 
 ## Unresolved questions
 
-1. **Ring buffer process boundary (Android).** The IME runs in the same package
-   but the user's crash might be in the IME process. Should the IME also write a
-   crash file, or only the main app? (Proposal: both, different filename suffix.)
-2. **Symbolication.** Do we ship (or host) dSYM/PDB/.map files to symbolicate
-   native stacks, or accept unsymbolicated frames in v1?
-3. **Verbose-log opt-in surface.** Is "Send verbose logs with crash reports" the
-   right Settings copy and placement (Settings → Privacy, per RFC 0006 IA)?
-4. **Retention of crash files pre-opt-in.** 7 days is proposed; is that right
-   given some users take longer to decide on the analytics opt-in?
+1. **Android IME process boundary** — should the IME also write a crash file, or
+   only the main app? (Proposal: both, suffixed filenames.)
+2. **Verbose-log opt-in** — copy and placement of "Send verbose logs with crash
+   reports" (Settings → Privacy, per RFC 0006).
+3. **Native symbolication** — accept unsymbolicated native frames in v1 (rely on
+   user-shared `.ips` / dialogs), or revisit a crash SDK later?
+4. **Crash-file format convergence** — switch macOS from JSON to the shared text
+   format, or accept both?
 
 ## Resolution
 
@@ -339,3 +209,16 @@ _(Filled in once a decision is reached — do not fill in when proposing.)_
 - Decided by: _pending_
 - Date: _pending_
 - Decision: _pending_
+
+## History
+
+Rewritten 2026-06-29 as a single coherent spec (was a base + stacked
+amendments, which had become hard to read). It folds in:
+
+- TestFlight dual-channel for Apple ([PR #14](https://github.com/dasher-project/governance/pull/14)).
+- Engine-side exception capture / `dasher_has_engine_error` ([PR #15](https://github.com/dasher-project/governance/pull/15)).
+- PostHog Error Tracking (`$exception`) + crash-file format (originally PR #16,
+  closed into this rewrite).
+
+Implementation references: DasherCore v0.1.6 (#38, issue #34/#35),
+Dasher-Windows #17, Dasher-Apple #20.

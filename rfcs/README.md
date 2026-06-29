@@ -37,6 +37,21 @@ The process is closely based on [Rust's RFC model](https://github.com/rust-lang/
 | `rejected` | Not accepted |
 | `withdrawn` | Author withdrew the proposal |
 
+## Keeping RFCs current
+
+An RFC body should always describe the **current** design — not a history of
+changes. When a design evolves:
+
+- **Edit the body in place** so it reads as one coherent spec.
+- Append a short, dated entry to a `## History` section at the end (what
+  changed + a link to the PR).
+- **Avoid appending "Amendment N" sections** that supersede earlier body text.
+  A reader should never have to reconcile "the base says X, but amendment 3 says
+  not X". If a change is large, **rewriting the RFC** (same number, new body) is
+  preferred over stacking amendments.
+
+This keeps RFCs readable for someone arriving fresh.
+
 ## Index
 
 | # | Title | Status | Platforms |

@@ -4,7 +4,7 @@ title: Crash reporting & engine diagnostics capture
 status: proposed
 platforms: [apple, windows, gtk, android, core]
 created: 2026-06-28
-updated: 2026-06-28
+updated: 2026-06-29
 amendments:
   - number: 1
     title: "TestFlight crash reporting for Apple platforms"
@@ -13,6 +13,14 @@ amendments:
   - number: 2
     title: "Engine-side exception capture at the C-API boundary"
     date: 2026-06-28
+    issue: TBD
+  - number: 3
+    title: "PostHog Error Tracking ($exception), not a custom crash event"
+    date: 2026-06-29
+    issue: TBD
+  - number: 4
+    title: "Standard crash envelope & deferred-crash file format"
+    date: 2026-06-29
     issue: TBD
 ---
 
@@ -305,6 +313,78 @@ No schema change to the base RFC envelope. `engine_log_tail` simply becomes
 able to contain level-3 boundary-exception lines, which it previously could
 not. PII scrubbing is unchanged — the engine does not place user-typed
 text, clipboard, or canvas contents in boundary-exception messages.
+
+## Amendment 3: PostHog Error Tracking (`$exception`), not a custom crash event
+
+The base RFC specified a custom PostHog event named `crash`. **Superseded:**
+every frontend MUST send crashes via **`PostHog.captureException(...)`**, which
+emits a PostHog **`$exception`** event ingested by the **Error Tracking** product
+(grouping, trends, fingerprinting, a symbolication UI). A generic
+`capture("crash", …)` event does **not** appear in Error Tracking and loses
+these capabilities.
+
+### Contract
+
+- Send via `PostHogSDK.shared.captureException(error, properties:)` (Apple) /
+  `PostHogSdk.CaptureException(ex, …)` (Windows) / the equivalent on
+  Android/GTK.
+- The reconstructed throwable carries the original `exception_type` and
+  `stack_trace`; `engine_log_tail`, `source`, and default properties attach as
+  event properties (per the envelope table in "Detailed design").
+- `distinctId`: `captureException` resolves the distinct ID from SDK storage, so
+  frontends MUST `identify(distinctId)` after PostHog setup so crashes attribute
+  to the same anonymous ID as analytics events.
+- **Deferred send:** the crashing process must not call the SDK. Write the crash
+  file synchronously at crash time; reconstruct the throwable from the saved
+  `exception_type`/`stack` and call `captureException` on the **next launch**
+  (Windows: `SavedCrashException`; macOS: an `NSError` built from the saved
+  type/reason).
+
+### Honest scope
+
+PostHog Error Tracking carries the **captured** stack only — managed / Swift /
+Obj-C frames in the reconstructed exception, at send time. It does **not**
+auto-symbolicate native SIGSEGV/SIGABRT frames. For native stacks, rely on the
+OS crash logs (macOS `.ips`, the Windows crash dialog) shared manually by the
+user, or a future dedicated crash SDK. The RFC must not imply PostHog
+symbolicates native crashes.
+
+### Status
+
+- **Windows:** implemented — `FlushPendingCrash` → `PostHogSdk.CaptureException`
+  with `SavedCrashException` (Dasher-Windows #17).
+- **macOS:** implemented — `AnalyticsService.captureCrash(envelope:)` →
+  `PostHogSDK.shared.captureException(NSError, …)`, distinctId via `identify()`
+  (Dasher-Apple #20).
+- iOS / visionOS / GTK / Android: pending (production iOS path will mirror macOS).
+
+## Amendment 4: Standard crash envelope & deferred-crash file format
+
+To keep the deferred send-on-next-launch path identical across platforms, the
+**crash file** is a small text file with a shared shape (pioneered by
+Dasher-Windows):
+
+```
+exception_type=<full type name>
+source=<capture hook, e.g. AppDomain.UnhandledException / unclean_shutdown>
+
+<stack trace>
+
+--- engine log ---
+<engine_log_tail>
+```
+
+- Header: `key=value` lines (`exception_type`, `source`).
+- Blank line.
+- Body: the saved stack trace, followed by a literal `\n--- engine log ---\n`
+  separator, then the engine log tail.
+- The next-launch flush parses header + body, reconstructs the throwable, and
+  calls `captureException` (Amendment 3).
+
+Frontends MAY use a different on-disk encoding (macOS currently writes JSON)
+provided the resulting PostHog `$exception` event carries the same property
+shape. Converging on the text format above is recommended so the parse/flush
+logic can be shared.
 
 ## Prior art
 

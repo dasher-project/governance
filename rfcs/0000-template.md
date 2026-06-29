@@ -74,3 +74,14 @@ _(Filled in once a decision is reached — do not fill in when proposing.)_
 - Decided by: _maintainers + stewards_
 - Date: _YYYY-MM-DD_
 - Decision: _short rationale_
+
+## History
+
+A short, dated log of revisions after the RFC is first proposed (one line per
+change + PR link). The body above always reflects the **current** design; this
+section is just for traceability — see
+[rfcs/README.md → Keeping RFCs current](./README.md#keeping-rfcs-current).
+Avoid appending "Amendment N" sections that supersede body text; edit the body
+in place or rewrite it instead.
+
+- _YYYY-MM-DD_ — _(initial proposal)_

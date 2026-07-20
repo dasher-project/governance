@@ -68,3 +68,4 @@ This keeps RFCs readable for someone arriving fresh.
 | [0009](./0009-crash-reporting.md) | Crash reporting & engine diagnostics capture | proposed | apple, windows, gtk, android, core |
 | [0010](./0010-input-access-methods.md) | Input & access methods (steering/selection/dwell/switch/eye-gaze/joystick) | draft | apple, windows, gtk, android, core |
 | [0011](./0011-testing.md) | Testing expectations for RFCs | proposed | apple, windows, gtk, android, web, core |
+| [0012](./0012-typing-rate.md) | Typing rate (CPS / WPM) display | proposed | apple, windows, gtk, android, core |

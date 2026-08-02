@@ -1,10 +1,10 @@
 ---
 rfc: 0003
 title: Multilingual UI support across all frontends
-status: proposed
+status: active
 platforms: [apple, windows, gtk, android, core]
 created: 2026-06-17
-updated: 2026-06-28
+updated: 2026-08-01
 ---
 
 # Multilingual UI support across all frontends
@@ -18,6 +18,28 @@ is **hardcoded English** with no native localization wired up. This RFC
 proposes a per-platform localization strategy for frontend strings so that
 users get a fully localised experience — engine *and* UI — and aligns the
 language picker so all 33 DasherCore locales are exposed everywhere.
+
+## Implementation status
+
+Audited August 2026. The engine layer is done. The frontend layer is not done
+on any platform.
+
+DasherCore ships 33 locale files, and every frontend that uses the C API can
+localise parameter labels through `dasher_set_locale`. But the app chrome — the
+toolbar, the settings tabs, the dialogs, the onboarding text — is hardcoded
+English on every frontend. No frontend ships `.xcstrings`, `.resx`, `.po`, or
+`Localizable.strings` files for its own strings.
+
+| Platform | Engine strings | App chrome |
+| --- | --- | --- |
+| Dasher-Apple | Localised (9 locales in the picker) | English only |
+| Dasher-Windows | Localised (10 locales in the picker) | English only |
+| Dasher-GTK | Not bound (the gettext domain is never set) | English only |
+| Dasher-Mobile (Android) | Partial | English only; one `values/` bucket, no translations ship |
+
+The next step is to wrap frontend strings in each platform's native catalog and
+bind the locale list to `locales.json`. The RTL work (Arabic, Persian, Urdu) has
+not started.
 
 ## Motivation
 

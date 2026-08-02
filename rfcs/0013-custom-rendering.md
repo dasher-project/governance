@@ -1,37 +1,74 @@
 ---
 rfc: 0013
-title: Custom rendering API (two-strand)
-status: proposed
+title: Node-tree rendering API (custom rendering)
+status: active
 platforms: [apple, windows, gtk, android, web, core]
 created: 2026-07-25
-updated: 2026-07-25
+updated: 2026-08-01
 ---
 
-# Custom rendering API (two-strand)
+# Node-tree rendering API (custom rendering)
 
 ## Summary
 
-Give frontends a choice: render Dasher from the existing flat draw-command
-buffer (the current path), **or** query the live node tree and render it
-themselves with their own graphics API. The two strands coexist — a frontend
-can use the command buffer for most things and drop into custom rendering for
-specific features (3D cubes, VR spatial layouts, custom visualisations), or
-render everything from scratch.
+Give a frontend a second way to render Dasher. Today every frontend renders from
+the flat draw-command buffer. This RFC adds a second path: the frontend queries
+the live node tree and draws it with its own graphics API. The two paths
+coexist. A frontend can use the command buffer for most of its drawing and drop
+into node-tree rendering for a specific feature, or it can render everything from
+scratch.
+
+> **Naming note (August 2026).** This RFC used to call the two paths "Strand 1"
+> and "Strand 2". Those names said nothing about what each path does. They are
+> renamed here:
+>
+> - **command-buffer rendering** — the existing path (`dasher_frame` returns an
+>   `int[]` of draw commands; the frontend replays them).
+> - **node-tree rendering** — the path this RFC adds (`dasher_get_visible_nodes`
+>   returns the node tree; the frontend draws it itself).
+
+## Implementation status
+
+Audited August 2026. The engine API is implemented and tested. No production
+frontend uses it.
+
+- **DasherCore: implemented and tested.** `dasher_get_visible_nodes`,
+  `dasher_set_visible_nodes_enabled`, `dasher_get_viewport`, and the
+  `dasher_node_info` / `dasher_viewport` structs all exist in `dasher.h` and
+  `CAPI.cpp`, with tests in `tests/test_strand2_nodes.cpp` and
+  `tests/test_node_tree.cpp`.
+- **Frontends: none use it in production.** Every Apple target, plus Windows,
+  GTK, Android, and web, renders through the command buffer
+  (`dasher_frame` → `int[]`). None calls `dasher_get_visible_nodes`.
+- **DasherMac (experimental).** A branch of the macOS app uses node-tree
+  rendering to draw the cube (3D) shape mode. The work is experimental and
+  buggy. It is not merged and does not ship.
+- **Scope.** There is no plan to bring node-tree rendering to every platform.
+  It exists for the frontends that need full visual control (3D, VR, custom
+  accessibility views). The command buffer stays the default.
+
+### Where this might still matter
+
+The most promising future use is a spatial, eye-tracked port — for example a
+Meta Quest build that renders the node tree in 3D and drives it with foveated
+eye tracking. That is future work, not a near-term plan. The API is in place so
+that such a port can read the node tree through the same C boundary as every
+other frontend.
 
 ## Motivation
 
-The flat `int[]` command buffer (`dasher_frame`) is 2D painter's algorithm —
-no depth buffer, no perspective, no compositing. It works well for flat
+The flat `int[]` command buffer (`dasher_frame`) is a 2D painter's algorithm. It
+has no depth buffer, no perspective, and no compositing. It works well for flat
 rectangles, circles, text, and lines. It **cannot** represent:
 
-- **3D extruded cubes** (LP_SHAPE_TYPE = CUBE). The depth data
-  (`CubeDepthLevel`) exists inside DasherCore but is discarded when serialised
-  to the flat buffer. A two-pass frontend overlay (buffering opcode-7 cubes,
-  rendering shaded faces on top) was prototyped but produces a barely-visible
-  effect because the flat buffer's painter's algorithm buries parent shading
-  under child rectangles.
-- **Spatial / VR rendering** (visionOS). Placing Dasher nodes in 3D space,
-  with depth based on zoom level, is impossible through the flat buffer.
+- **3D extruded cubes** (`LP_SHAPE_TYPE = CUBE`). The depth data
+  (`CubeDepthLevel`) exists inside DasherCore, but the flat buffer discards it
+  when it serialises the commands. A two-pass frontend overlay (buffer the
+  opcode-7 cubes, then draw the shaded faces on top) was prototyped. The effect
+  is barely visible, because the painter's algorithm buries the parent shading
+  under the child rectangles.
+- **Spatial or VR rendering** (visionOS). Placing Dasher nodes in 3D space, with
+  depth based on the zoom level, is impossible through the flat buffer.
 - **Alternative visualisations** — radial trees, force-directed layouts,
   particle effects, animated transitions.
 - **Custom accessibility rendering** — high-contrast simplified views,
@@ -39,7 +76,7 @@ rectangles, circles, text, and lines. It **cannot** represent:
 
 ### What already exists
 
-DasherCore already has "test/diagnostic hooks" (`dasher.h` §Test, marked "NOT
+DasherCore already has test and diagnostic hooks (`dasher.h`, §Test, marked "not
 intended for production frontends") that expose raw node-tree data:
 
 ```c
@@ -51,32 +88,32 @@ int dasher_screen_to_dasher(ctx, sx, sy, &dx, &dy);
 int dasher_get_alphabet_symbol_text(ctx, index, buf, len);
 ```
 
-These prove the concept — a frontend can query node positions and text. They
-just aren't complete enough for full rendering (no recursive tree walking, no
-node colours, no labels for group/control nodes).
+These prove the concept: a frontend can query node positions and text. They are
+not complete enough for full rendering (no recursive tree walk, no node colours,
+no labels for group or control nodes).
 
 ## Detailed design
 
-### Two strands, coexisting
+### Two paths, coexisting
 
 ```
-Strand 1 (existing, default):
-  dasher_frame() → int[] draw commands → frontend renders
+Command-buffer rendering (existing, default):
+  dasher_frame() -> int[] draw commands -> the frontend renders
 
-Strand 2 (new, opt-in):
-  dasher_get_visible_nodes() → node tree data → frontend renders from scratch
+Node-tree rendering (new, opt-in):
+  dasher_get_visible_nodes() -> node tree data -> the frontend renders from scratch
 ```
 
-A frontend uses whichever strand it wants. Most frontends use Strand 1 (simpler,
-less code). A frontend that needs 3D, VR, or custom visuals uses Strand 2 for
-some or all of its rendering.
+A frontend uses whichever path it wants. Most frontends use the command buffer,
+because it is simpler and needs less code. A frontend that needs 3D, VR, or
+custom visuals uses node-tree rendering for some or all of its drawing.
 
-### Strand 2 API: node tree exposure
+### The node-tree API
 
-Both structs begin with a `struct_size` field (set by the caller to
-`sizeof(dasher_node_info)` / `sizeof(dasher_viewport)` before the call) so the
-engine can detect the ABI version and gracefully ignore fields it doesn't know
-about. This lets the structs evolve without new symbols or breaking existing
+Both structs begin with a `struct_size` field. The caller sets this to
+`sizeof(dasher_node_info)` or `sizeof(dasher_viewport)` before the call. The
+engine then detects the ABI version and ignores fields it does not know. This
+lets the structs evolve without new symbols and without breaking existing
 frontends.
 
 ```c
@@ -89,8 +126,8 @@ typedef struct dasher_node_info {
     int       has_children;     // 1 if this node has visible children
     int       depth;            // Recursion depth from root (0 = root child)
     int       is_game_node;     // 1 if on the game-mode path
-    // Screen-space bounds (pre-computed by the engine — saves the frontend
-    // from calling dasher_dasher_to_screen for every node).
+    // Screen-space bounds (the engine pre-computes these, so the frontend does
+    // not call dasher_dasher_to_screen for every node).
     int screen_x1, screen_y1, screen_x2, screen_y2;
     // Colours (from the active palette).
     int fill_argb;
@@ -100,20 +137,19 @@ typedef struct dasher_node_info {
 } dasher_node_info;
 
 // Query the visible node tree. Returns the number of nodes written (up to
-// max_nodes). The result is clipped to the visible region — exactly the same
-// set of nodes the command buffer would render for the same frame — so Strand 1
-// and Strand 2 see identical node sets and the parity invariant holds.
+// max_nodes). The result is clipped to the visible region — the same set of
+// nodes the command buffer would render for the same frame — so the two paths
+// see the same nodes and the parity invariant holds.
 //
-// Nodes are returned in depth-first tree-traversal order (parent before
-// children). This is convenient for painter's-algorithm frontends (render in
-// the returned order), but a 3D frontend will typically re-sort back-to-front
-// or use a z-buffer, so the ordering should be treated as tree-traversal
-// order, not a mandated render order.
+// Nodes come back in depth-first tree-traversal order (parent before children).
+// This is convenient for a painter's-algorithm frontend (draw in the returned
+// order). A 3D frontend will usually re-sort back-to-front or use a z-buffer,
+// so treat the order as tree-traversal order, not a required draw order.
 //
-// out_strings holds label text for nodes that have one; label_index in
+// out_strings holds the label text for nodes that have one; label_index in
 // dasher_node_info indexes into it. Both out_nodes and out_strings point into
-// engine-owned buffers valid until the next call to dasher_frame or
-// dasher_get_visible_nodes on this context — copy if you need the data beyond
+// engine-owned buffers that stay valid until the next call to dasher_frame or
+// dasher_get_visible_nodes on this context. Copy the data if you need it beyond
 // the next frame.
 DASHER_API int dasher_get_visible_nodes(
     dasher_ctx* ctx,
@@ -135,157 +171,157 @@ typedef struct dasher_viewport {
 DASHER_API int dasher_get_viewport(dasher_ctx* ctx, dasher_viewport* out);
 ```
 
-### How a frontend uses Strand 2
+### How a frontend uses node-tree rendering
 
-```
-1. dasher_mouse_move / dasher_frame as normal (engine advances)
-2. dasher_get_visible_nodes → array of dasher_node_info + strings
-3. For each node (in returned order, or re-sort for 3D):
-   - Render it however you want (flat rect, 3D cube, sphere, text card)
-   - Use fill_argb / outline_argb for colours
-   - Use label_index → out_strings for text
-   - Use screen_x1..y2 for position
-   - Use has_children + depth for tree-aware rendering (e.g. 3D extrusion
-     scaled by depth)
-4. Optionally call dasher_frame too (for the crosshair, game decorations, etc.)
-   and render those commands on top — or render the crosshair yourself from
+1. Call `dasher_mouse_move` / `dasher_frame` as normal so the engine advances.
+2. Call `dasher_get_visible_nodes` to get the array of `dasher_node_info` and
+   the strings.
+3. For each node (in the returned order, or re-sorted for 3D):
+   - Draw it however you want (flat rect, 3D cube, sphere, text card).
+   - Use `fill_argb` / `outline_argb` for the colours.
+   - Use `label_index` → `out_strings` for the text.
+   - Use `screen_x1..y2` for the position.
+   - Use `has_children` and `depth` for tree-aware drawing (for example, 3D
+     extrusion scaled by depth).
+4. Optionally call `dasher_frame` too (for the crosshair, game decorations, and
+   so on) and draw those commands on top. Or draw the crosshair yourself from
    the viewport data.
-```
 
 ### What the engine provides vs what the frontend decides
 
-| Concern | Engine (Strand 2) | Frontend |
-|---|---|---|
-| Node positions (Dasher + screen) | ✅ via `dasher_node_info` | — |
-| Node colours | ✅ from active palette | may override |
-| Node text labels | ✅ via strings array | may restyle |
-| Node tree structure | ✅ depth-first order, depth, has_children | — |
-| Shape (rect / circle / cube / triangle) | ❌ not the engine's call | ✅ frontend decides |
-| Depth / 3D extrusion | ❌ | ✅ frontend decides (e.g. from `depth`) |
-| Animation / transitions | ❌ | ✅ frontend decides |
-| Input handling | ✅ mouse_move / key_event | — |
-| Language model / probabilities | ✅ | — |
+| Concern | Engine (node-tree) | Frontend |
+| --- | --- | --- |
+| Node positions (Dasher and screen) | Yes, via `dasher_node_info` | — |
+| Node colours | Yes, from the active palette | May override |
+| Node text labels | Yes, via the strings array | May restyle |
+| Node tree structure | Yes (depth-first order, depth, has_children) | — |
+| Shape (rect / circle / cube / triangle) | Not the engine's call | The frontend decides |
+| Depth / 3D extrusion | Not provided | The frontend decides (for example, from `depth`) |
+| Animation / transitions | Not provided | The frontend decides |
+| Input handling | Yes (`mouse_move` / `key_event`) | — |
+| Language model / probabilities | Yes | — |
 
-The key shift: **shape and depth become frontend concerns, not engine
-concerns.** LP_SHAPE_TYPE becomes a hint, not a mandate — the frontend can
-render cubes, flat rects, or something entirely new. A frontend that wants 3D
-cube extrusion derives it from `dasher_node_info.depth` — no separate
-extrusion level is needed in the viewport.
+The key shift: **shape and depth become frontend concerns, not engine concerns.**
+`LP_SHAPE_TYPE` becomes a hint, not a mandate. The frontend can draw cubes, flat
+rectangles, or something new. A frontend that wants 3D cube extrusion derives it
+from `dasher_node_info.depth`; the viewport does not need a separate extrusion
+level.
 
-### Relationship to Strand 1
+### Relationship to command-buffer rendering
 
-The strands are not mutually exclusive:
+The two paths are not mutually exclusive:
 
-- **Default:** Strand 1 only. `dasher_frame()` → `int[]` → render. Simplest.
-- **Hybrid:** Strand 1 for most rendering + Strand 2 for specific features.
-  Example: use `dasher_frame()` for everything, but when LP_SHAPE_TYPE is CUBE,
-  switch to `dasher_get_visible_nodes()` and render 3D cubes from the node
-  tree.
-- **Full custom:** Strand 2 only. Frontend renders everything from node data.
-  Most flexible; most work.
+- **Default:** command buffer only. `dasher_frame()` → `int[]` → render. Simplest.
+- **Hybrid:** command buffer for most drawing, plus node-tree rendering for a
+  specific feature. For example, call `dasher_frame()` for everything, but when
+  `LP_SHAPE_TYPE` is `CUBE`, switch to `dasher_get_visible_nodes()` and draw 3D
+  cubes from the node tree.
+- **Full custom:** node-tree only. The frontend renders everything from the node
+  data. Most flexible; most work.
 
-### What about the existing opcode-7 cube experiment?
+### What about the opcode-7 cube experiment?
 
 The opcode-7 approach (DasherCore PR #50) carries cube depth data through the
-flat buffer for a frontend two-pass overlay. It works (cubes are buffered and
-rendered on top) but the effect is underwhelming because the flat buffer's
-painter's algorithm limits the visual result.
+flat buffer for a frontend two-pass overlay. It works — the cubes are buffered
+and drawn on top — but the effect is weak, because the painter's algorithm
+limits the visual result.
 
-With Strand 2, opcode 7 becomes unnecessary — the frontend has the full node
-tree and can render proper 3D cubes directly. The recommendation is:
+With node-tree rendering, opcode 7 is unnecessary: the frontend has the full
+node tree and can draw real 3D cubes directly. The recommendation is:
 
-- **Withdraw opcode 7** from the command buffer (it added complexity for a
-  limited result).
-- **Keep LP_SHAPE_TYPE** as a hint (the frontend can read it via
-  `dasher_get_long_parameter` and use it to choose its rendering style).
-- **Frontends that want cubes** use Strand 2 + their own 3D rendering.
+- **Withdraw opcode 7** from the command buffer (it added complexity for a weak
+  result).
+- **Keep `LP_SHAPE_TYPE`** as a hint (the frontend can read it through
+  `dasher_get_long_parameter` and use it to choose its drawing style).
+- **Frontends that want cubes** use node-tree rendering plus their own 3D code.
 
 ## Drawbacks
 
-- **API surface growth.** `dasher_get_visible_nodes` + `dasher_viewport` +
-  `dasher_node_info` is a significant new API. The `struct_size` ABI-versioning
-  field mitigates forward-compatibility concerns, but the API still needs docs
-  and tests.
-- **Duplication of rendering logic.** Each frontend that uses Strand 2
-  reimplements coordinate transforms, colour lookups, text positioning, etc.
-  that DasherViewSquare already does. This is by design (flexibility) but it's
-  more code per frontend.
+- **API surface growth.** `dasher_get_visible_nodes`, `dasher_viewport`, and
+  `dasher_node_info` are a significant new API. The `struct_size`
+  ABI-versioning field mitigates the forward-compatibility risk, but the API
+  still needs docs and tests.
+- **Duplicate drawing logic.** Each frontend that uses node-tree rendering
+  reimplements the coordinate transforms, the colour lookups, and the text
+  positioning that `DasherViewSquare` already does. This is by design
+  (flexibility), but it is more code per frontend.
 - **Performance.** Copying the node tree into a struct array every frame has a
-  cost. For typical Dasher (50–200 visible nodes) this is negligible; for
-  extreme cases it may matter.
-- **Potential for inconsistency.** A custom-rendering frontend might position
-  nodes slightly differently than the command-buffer path, leading to
-  mismatched input coordinates. The pre-computed `screen_x1..y2` fields
-  mitigate this (the engine does the coordinate transform).
+  cost. For typical Dasher use (50–200 visible nodes) the cost is negligible;
+  for extreme cases it may matter.
+- **Risk of inconsistency.** A custom-rendering frontend might position nodes
+  slightly differently from the command-buffer path, which would mismatch the
+  input coordinates. The pre-computed `screen_x1..y2` fields mitigate this,
+  because the engine does the coordinate transform.
 
 ## Alternatives considered
 
-- **Opcode 7 (cube data in the flat buffer).** Prototyped in DasherCore PR
-  #50. Works but produces an unconvincing 3D effect because the flat buffer's
-  painter's algorithm can't composite depth correctly. Withdraw in favour of
-  Strand 2.
-
-- **New opcodes for every 3D shape.** Rejected: the flat buffer would grow
-  indefinitely (cube, sphere, cylinder, perspective-rect...), and each
-  frontend still has to implement the new opcodes. Strand 2 solves this once.
-
-- **Frontend-specific rendering paths (bypass the C API entirely).** Example:
-  DasherApple queries DasherCore internals directly for node positions.
-  Rejected: violates the C API boundary (CONTRIBUTING Rule 4), not portable,
-  and each frontend reinvents the same queries.
+- **Opcode 7 (cube data in the flat buffer).** Prototyped in DasherCore PR #50.
+  It works, but it produces a weak 3D effect, because the painter's algorithm
+  cannot composite depth. Withdraw it in favour of node-tree rendering.
+- **A new opcode for every 3D shape.** Rejected: the flat buffer would grow
+  without end (cube, sphere, cylinder, perspective-rect, and more), and each
+  frontend would still have to implement the new opcodes. Node-tree rendering
+  solves this once.
+- **Frontend-specific rendering paths (bypass the C API).** For example,
+  Dasher-Apple queries DasherCore internals directly for node positions.
+  Rejected: it breaks the C-API boundary (CONTRIBUTING Rule 4), it is not
+  portable, and each frontend reinvents the same queries.
 
 ## Prior art
 
-- **Browser DOM rendering.** The browser exposes a DOM tree; CSS / JavaScript
-  decide how to render it. Strand 2 is analogous: DasherCore exposes the node
-  tree; the frontend decides how to render it.
-- **Accessibility APIs** (UIAutomation, AXAPI). Expose semantic structure
-  (tree, roles, labels); the consumer (screen reader, automation tool) renders
-  or interprets however it wants.
+- **Browser DOM rendering.** The browser exposes a DOM tree; CSS and JavaScript
+  decide how to render it. Node-tree rendering is analogous: DasherCore exposes
+  the node tree; the frontend decides how to draw it.
+- **Accessibility APIs** (UIAutomation, AXAPI). They expose semantic structure
+  (a tree, roles, labels); the consumer (a screen reader or automation tool)
+  renders or interprets it however it wants.
 - **Unity / Unreal entity-component systems.** The engine provides data; the
-  renderer (which may be swapped) decides visual representation.
+  renderer (which you can swap) decides the visual representation.
 
 ## Testing
 
 Per [RFC 0011](./0011-testing.md):
 
-- **DasherCore unit tests** (`tests/`): verify `dasher_get_visible_nodes`
+- **DasherCore unit tests** (`tests/`): verify that `dasher_get_visible_nodes`
   returns the correct count, tree-traversal order (depth-first), positions
-  (match `dasher_dasher_to_screen`), and colours for a known node tree.
+  (they match `dasher_dasher_to_screen`), and colours for a known node tree.
   Property invariant: the screen bounds in `dasher_node_info` match the
-  opcode-4 rectangles from `dasher_frame` for the same frame (Strand 1/2
-  parity). Verify the node set is clipped to the visible region (same as the
-  command buffer).
-- **Frontend (manual):** render the same node tree in flat mode (Strand 1) and
-  custom mode (Strand 2); verify visual parity. Then switch to cube mode under
-  Strand 2 and verify 3D cubes are visible.
+  opcode-4 rectangles from `dasher_frame` for the same frame (parity between the
+  two paths). Verify that the node set is clipped to the visible region, the
+  same as the command buffer.
+- **Frontend (manual):** draw the same node tree in command-buffer mode and in
+  node-tree mode; verify visual parity. Then switch to cube mode under
+  node-tree rendering and verify that 3D cubes are visible.
 
 ## Unresolved questions
 
-1. **Should the engine still emit opcode 7 (cube data) for frontends that
-   want the two-pass approach?** Or withdraw it entirely in favour of Strand 2?
-   (Recommendation: withdraw.)
+1. **Should the engine still emit opcode 7 (cube data)** for frontends that want
+   the two-pass approach, or withdraw it entirely in favour of node-tree
+   rendering? (Recommendation: withdraw.)
 2. **Colour palette access.** Should the API expose the palette directly
-   (`dasher_get_palette_colors`), or only per-node colours in
+   (`dasher_get_palette_colors`), or only the per-node colours in
    `dasher_node_info`?
 
 ## Resolution
 
-_(Filled in once a decision is reached.)_
-
-- Status: _pending_
-- Decided by: _pending_
-- Date: _pending_
-- Decision: _pending_
+- Status: _accepted (engine API implemented; no production frontend yet)_
+- Decided by: _maintainers_
+- Date: _2026-08-01_
+- Decision: _The C API lands as the second rendering path. It is opt-in and
+  coexists with the command buffer. There is no plan to bring it to every
+  platform; it exists for frontends that need full visual control._
 
 ## History
 
-- 2026-07-25 — initial proposal. Motivated by the cube-mode limitation
-  (DasherCore issue #49, PR #50) and the broader vision of enabling VR/custom
-  rendering through the C API.
-- 2026-07-25 — review feedback incorporated: clipping to visible region
-  (resolved Q2); tree-traversal order documented as traversal, not render
-  order; `struct_size` ABI-versioning field added to both structs; cube depth
-  removed from viewport (frontend derives from `node_info.depth`); string
-  lifetime documented (valid until next `dasher_frame` /
-  `dasher_get_visible_nodes`).
+- 2026-07-25 — initial proposal, framed as a "two-strand" API. Motivated by the
+  cube-mode limit (DasherCore issue #49, PR #50) and the broader goal of VR and
+  custom rendering through the C API.
+- 2026-07-25 — review feedback folded in: clip to the visible region; document
+  tree-traversal order as traversal, not draw order; add the `struct_size`
+  ABI-versioning field; drop cube depth from the viewport (the frontend derives
+  it from `node_info.depth`); document the string lifetime.
+- 2026-08-01 — renamed "Strand 1" / "Strand 2" to **command-buffer rendering**
+  and **node-tree rendering**. Added the honest implementation status: the
+  engine API is implemented and tested, no production frontend uses it, and the
+  DasherMac cube experiment is unmerged and buggy. Recorded that a spatial
+  eye-tracked port (for example Meta Quest) is the most promising future use.

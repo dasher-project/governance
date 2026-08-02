@@ -13,6 +13,15 @@ updated: YYYY-MM-DD
 
 One paragraph explaining the change. What does it do, and at a high level, how?
 
+## Implementation status
+
+Once the RFC starts to land, record the real state here, platform by platform.
+Use a short table (Platform | State | Notes) and plain facts: "implemented",
+"partial", or "not started". State the date of the audit. This section is the
+single place a reader looks for "is it built, and where" — keep it honest and
+keep it current. Leave it as "Not yet implemented" until there is something to
+report.
+
 ## Motivation
 
 What problem does this solve? Who feels the pain? Link any issues, user

@@ -4,7 +4,7 @@ title: First-run onboarding experience
 status: proposed
 platforms: [apple, windows, gtk, android, core]
 created: 2026-06-17
-updated: 2026-06-29
+updated: 2026-08-01
 ---
 
 # First-run onboarding experience
@@ -22,6 +22,21 @@ from DasherCore** (commit `f79eb6a9`, Jun 2026; it had been disabled since 2007
 due to segfaults and was never re-enabled). This RFC frames the onboarding
 problem, documents what exists, identifies the design questions that need
 **UX expert input**, and proposes a phased implementation plan.
+
+## Implementation status
+
+Audited August 2026. Not implemented.
+
+No frontend ships a first-run onboarding flow. The only first-launch prompts
+today are the analytics opt-in (Apple, Windows) and the v5 migration prompt
+(Apple macOS, Windows). visionOS shows a one-time "pinch and look" gesture hint;
+that is a single gesture tip, not an onboarding flow.
+
+Game Mode exists on all platforms and is the closest thing to guided practice,
+but the user invokes it at any time. It is never triggered on first launch.
+
+This RFC still needs UX research before it can move out of `proposed` (see
+"Design questions needing UX expert input").
 
 ## Motivation
 

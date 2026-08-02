@@ -1,10 +1,10 @@
 ---
 rfc: 0002
 title: Adopt Lucide as the cross-platform icon set
-status: proposed
+status: implemented
 platforms: [apple, windows, gtk, android]
 created: 2026-06-17
-updated: 2026-06-28
+updated: 2026-08-01
 ---
 
 # Adopt Lucide as the cross-platform icon set
@@ -16,6 +16,22 @@ ISC-licensed, community-maintained icon library of 1,400+ icons — as the singl
 source of UI iconography across Apple, Windows, and GTK. Each platform uses the
 appropriate Lucide package: `lucide-icons-swift` (Apple SPM),
 `Lucide.Avalonia` (Windows NuGet), and the Lucide TTF font (GTK/Pango).
+
+## Implementation status
+
+Audited August 2026. Implemented on Apple and Windows; not started on GTK,
+Android, or web.
+
+| Platform | State | Notes |
+| --- | --- | --- |
+| Dasher-Apple | Implemented | `lucide-icons-swift`; used in more than 100 places across iOS, macOS, and visionOS. |
+| Dasher-Windows | Implemented | `Lucide.Avalonia`; used in the main window and the settings tabs. |
+| Dasher-GTK | Not started | Uses default gtkmm widgets and text labels. |
+| Dasher-Mobile (Android) | Not started | Uses Google Material symbols, not Lucide. |
+| dasher-web | Not started | Buttons are plain text or Unicode glyphs. |
+
+Lucide is the agreed icon set for Apple and Windows. GTK, Android, and web have
+not adopted it.
 
 ## Motivation
 

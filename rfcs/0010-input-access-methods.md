@@ -1,19 +1,20 @@
 ---
 rfc: 0010
 title: Input & access methods (steering/selection/dwell/switch/eye-gaze/joystick)
-status: draft
+status: active
 platforms: [apple, windows, gtk, android, core]
 created: 2026-06-28
-updated: 2026-06-28
+updated: 2026-08-01
 ---
 
 # Input & access methods (steering/selection/dwell/switch/eye-gaze/joystick)
 
-> **This RFC is a DRAFT.** It exists to frame a large, under-specified area that
-> is implemented ad-hoc and inconsistently across the v6 frontends. It is **not**
-> ready for consensus; the Unresolved Questions section is the most important
-> part. The intent is to align maintainers on the shape of the problem before any
-> platform invests in deeper work.
+> **Status (August 2026):** the canonical model below is agreed — the nine
+> selection methods, the seven steering methods, and the compatibility matrix.
+> Apple and Windows were verified to match for the methods they share, so this
+> RFC is now `active`. What remains open is the switch-access design (consume the
+> OS Switch Access / Switch Control vs. in-app capture) and the eye-gaze tracker
+> abstraction; see "Proposals still open".
 
 ## Summary
 
@@ -28,6 +29,23 @@ dwell / 1-switch / 2-switch / 2-push / scanning / direct-boxes) — is a
 different data model, and different gaps. This RFC proposes a shared
 **access-method model** and a per-platform integration spec so that "set up your
 access method" means the same thing on Apple, Windows, GTK, and Android.
+
+## Implementation status
+
+Audited August 2026. Promoted from `draft` to `active`: the canonical model
+below is now agreed. The Apple and Windows compatibility matrices were verified
+identical for the steering methods both platforms share.
+
+| Platform | Steering methods available | Notable gaps |
+| --- | --- | --- |
+| Dasher-Apple | pointer, touch, eye gaze (hover), tilt, switches, hand tracking (visionOS) | Joystick is listed but has no `GCController` capture. iOS switch capture is partial. |
+| Dasher-Windows | pointer, touch, eye gaze (WinRT + UDP), joystick | No switch-capture UI. No dwell rendering. |
+| Dasher-GTK | pointer, joystick (SDL), switch (keyboard) | No eye-gaze path of its own. |
+| Dasher-Mobile (Android) | touch, tilt | No switch, dwell, or eye gaze. |
+| dasher-web | pointer, touch, keyboard | No eye gaze, joystick, switch, or dwell. |
+
+The canonical lists and the compatibility matrix are agreed. The eye-gaze
+tracker abstraction and the switch-access design remain open.
 
 ## Motivation
 
@@ -51,7 +69,67 @@ access method" means the same thing on Apple, Windows, GTK, and Android.
   Windows WinRT+UDP / nothing on Android) with no shared tracker abstraction or
   wire protocol.
 
-## Detailed design (shape — to be refined)
+## Canonical model (agreed August 2026)
+
+The lists and the matrix below are **normative**: every frontend must use these
+names and must match this matrix. They were verified identical across Apple
+(`DasherShared/SelectionMethod.swift`, `AccessMethod.swift`) and Windows
+(`Engine/SelectionMethod.cs`, `AccessMethod.cs`) for the steering methods both
+platforms share.
+
+### Selection methods — the engine contract
+
+There are nine selection methods. Each maps 1:1 to an `SP_INPUT_FILTER` value in
+DasherCore, so the engine is the source of truth for this side. The mapping
+below must live in `DasherCore/docs` (next to `C_API.md`) so every frontend
+reads one table, not two. (Follow-up task for the DasherCore repo.)
+
+| Selection method | `SP_INPUT_FILTER` | Switch-based | Switches |
+| --- | --- | --- | --- |
+| continuous | `Normal Control` | no | 0 |
+| pressToMove | `Press Mode` | no | 0 |
+| clickToZoom | `Click Mode` | no | 0 |
+| dwell | `Normal Control` | no | 0 |
+| oneSwitch | `One Button Dynamic Mode` | yes | 1 |
+| twoSwitches | `Two Button Dynamic Mode` | yes | 2 |
+| twoPush | `Two Push Dynamic Mode` | yes | 1 |
+| scanning | `Menu Mode` | yes | 1 |
+| directBoxes | `Direct Mode` | yes | 1 |
+
+### Steering methods — per-platform, hardware-gated
+
+Steering methods are not a shared enum. They differ by hardware, and that is
+correct. The names are shared; availability is not.
+
+| Steering method | Apple | Windows | GTK | Android | Web |
+| --- | --- | --- | --- | --- | --- |
+| pointer | yes | yes | yes | yes | yes |
+| touch | yes | yes | yes | yes | yes |
+| eyeGaze | yes | yes | — | — | — |
+| tilt | iOS only | — | — | yes | — |
+| joystick | listed (no capture yet) | yes | yes (SDL) | — | — |
+| handTracking | visionOS only | — | — | — | — |
+| switchesOnly | yes | yes | yes | — | — |
+
+### Compatibility matrix — normative
+
+A frontend must offer only the selection methods marked for the active steering
+method. Apple and Windows already match this matrix for the methods they share.
+
+| Steering \ Selection | continuous | pressToMove | clickToZoom | dwell | oneSwitch | twoSwitches | twoPush | scanning | directBoxes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| pointer | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| touch | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| eyeGaze | ✓ | — | — | ✓ | ✓ | ✓ | — | ✓ | ✓ |
+| tilt | ✓ | ✓ | — | — | ✓ | ✓ | ✓ | ✓ | ✓ |
+| joystick | ✓ | ✓ | ✓ | — | ✓ | ✓ | — | ✓ | ✓ |
+| handTracking | ✓ | — | — | ✓ | ✓ | ✓ | — | — | — |
+| switchesOnly | — | — | — | — | ✓ | ✓ | ✓ | ✓ | ✓ |
+
+## Proposals still open (eye-gaze, switch profile, dwell)
+
+The canonical model above is agreed. The sections below are proposals for the
+parts that are still open. They are not normative yet.
 
 ### Shared concepts
 
@@ -167,10 +245,13 @@ all four platforms adopt the same shape.
 
 ## Unresolved questions (the most important section)
 
-1. **Canonical method enums.** Can Apple and Windows agree on a single shared
+1. **Canonical method enums.** ~~Can Apple and Windows agree on a single shared
    list of `SteeringMethod` × `SelectionMethod` values (and a compatibility
    matrix)? If yes, does it live in DasherCore as documentation, or only in this
-   RFC?
+   RFC?~~ **Resolved (August 2026):** yes — see the Canonical model. The nine
+   selection methods are agreed, the matrix is agreed, and the selection →
+   `SP_INPUT_FILTER` mapping will live in `DasherCore/docs` as the SSOT.
+   Steering methods stay per-platform (hardware-gated), names shared.
 2. **Switch Access vs. in-app switch capture on mobile.** On Android and iOS,
    should Dasher consume the **system** switch-access/switch-control events
    (lower friction, honours the user's existing switch setup) or capture its own
@@ -193,9 +274,20 @@ all four platforms adopt the same shape.
 
 ## Resolution
 
-_(Filled in once a decision is reached — do not fill in when proposing.)_
+- Status: _accepted (canonical model agreed; switch-access design still open)_
+- Decided by: _maintainers_
+- Date: _2026-08-01_
+- Decision: _The nine selection methods, the seven steering methods, and the
+  compatibility matrix are normative. The selection → `SP_INPUT_FILTER` mapping
+  is engine-owned and moves to `DasherCore/docs`. Steering methods stay
+  per-platform. The switch-access question (Q2) stays open and blocks deeper
+  switch work, not the model itself._
 
-- Status: _draft — not ready for consensus_
-- Decided by: _pending_
-- Date: _pending_
-- Decision: _pending_
+## History
+
+- 2026-06-28 — initial proposal, marked `draft` to frame the problem.
+- 2026-08-01 — promoted to `active`. Verified that Apple and Windows already
+  share identical selection-method lists, identical `SP_INPUT_FILTER` mappings,
+  and identical compatibility matrices for the steering methods they share. Made
+  those the normative Canonical model. Resolved Q1 (the mapping lives in
+  DasherCore). Q2 (switch access) remains open.

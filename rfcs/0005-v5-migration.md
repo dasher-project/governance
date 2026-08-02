@@ -1,10 +1,10 @@
 ---
 rfc: 0005
 title: "Dasher v5 → v6 migration: settings, alphabets, and user data"
-status: proposed
+status: implemented
 platforms: [apple, windows, gtk]
 created: 2026-06-18
-updated: 2026-06-18
+updated: 2026-08-01
 ---
 
 # Dasher v5 → v6 migration: settings, alphabets, and user data
@@ -19,6 +19,20 @@ frontend detects v5 data in its platform-specific location, translates
 the v5 parameter names to v6 equivalents, copies user-authored XML and
 training files, and presents a brief "Your settings have been imported"
 confirmation. The migration runs exactly once per user account.
+
+## Implementation status
+
+Audited August 2026.
+
+| Platform | State | Notes |
+| --- | --- | --- |
+| Dasher-Apple (macOS) | Implemented | `V5MigrationService` reads the v5 plist and user data; first-launch prompt and a Settings re-import panel. macOS only, by design: v5 had no iOS or visionOS predecessor. |
+| Dasher-Windows | Implemented | `V5MigrationService` reads `%APPDATA%\dasher.rc\settings.xml`; first-launch prompt and a Settings panel. |
+| Dasher-GTK | Not started | No migration code. The XML format matches Windows, so the logic can be shared once the paths are confirmed. |
+
+The parameter mapping (more than 100 parameters), the font-size transform, the
+start-mode consolidation, and the custom-XML copy all run on the two platforms
+that had a v5 predecessor.
 
 ## Motivation
 

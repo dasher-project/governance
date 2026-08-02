@@ -1,10 +1,10 @@
 ---
 rfc: 0006
 title: Settings information architecture and progressive disclosure
-status: proposed
+status: implemented
 platforms: [apple, windows, gtk, android, core]
 created: 2026-06-18
-updated: 2026-06-28
+updated: 2026-08-01
 ---
 
 # Settings information architecture and progressive disclosure
@@ -23,6 +23,24 @@ progressive-disclosure mechanism: **Simple** (common only), **Advanced**
 (+ advanced), **Pro** (all), with a user-facing toggle and sensible defaults.
 It also addresses tab structure consistency, contextual filtering refinement,
 and the critical need for end-user research to validate the tier assignments.
+
+## Implementation status
+
+Audited August 2026. The tab structure and the dynamic rendering from the engine
+manifest are implemented on most platforms. The three-tier progressive disclosure
+(Simple / Advanced / Pro) is not implemented on any platform.
+
+| Platform | Tabs from manifest | Tier filtering |
+| --- | --- | --- |
+| Dasher-Apple (iOS, macOS) | Yes (7 tabs) | No |
+| Dasher-Windows | Yes (10 tabs) | No |
+| Dasher-GTK | Yes (dynamic, from the parameter schema) | No |
+| dasher-web | Own panel structure (8 panels) | No |
+| Dasher-Mobile (Android) | No (a flat 5-row list, not from the manifest) | No |
+
+The `tier` field exists in `settings_manifest.json`, but the C API collapses it
+to a binary `advanced` flag, and no frontend filters by it. The end-user
+card-sort study to validate the tier assignments has not run.
 
 ## Motivation
 

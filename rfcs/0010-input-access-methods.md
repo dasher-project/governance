@@ -252,36 +252,36 @@ all four platforms adopt the same shape.
    selection methods are agreed, the matrix is agreed, and the selection →
    `SP_INPUT_FILTER` mapping will live in `DasherCore/docs` as the SSOT.
    Steering methods stay per-platform (hardware-gated), names shared.
-2. **Switch Access vs. in-app switch capture on mobile.** On Android and iOS,
-   should Dasher consume the **system** switch-access/switch-control events
-   (lower friction, honours the user's existing switch setup) or capture its own
-   (more control, requires the user to re-bind)? This is the biggest open
-   design question.
-3. **UDP gaze protocol.** Is Windows's existing format the right cross-platform
-   standard, or should we define a cleaner JSON/binary format now?
-4. **Android eye-gaze path.** Camera Switch presents as an accessibility
-   service, not a mouse; Tobii on Android presents as a mouse. Which do we
-   target first?
-5. **Dwell rendering in the IME/keyboard extension.** Out of scope, or a
-   reduced-capability version?
-6. **Where does the access-method state live?** Sidecar JSON (per RFC 0007
-   pattern) vs. engine parameters (per RFC 0006 manifest)?
-7. **UX research prerequisite.** What is the minimum user research required
-   before promoting this RFC out of `draft`?
-8. **Does Android need an `AccessibilityService`** (for Switch Access
-   consumption) alongside the existing `InputMethodService`? That has app-store
-   and permission implications worth its own sub-RFC.
+2. **Switch Access vs. in-app switch capture on mobile.** **Open.** Should
+   Dasher consume the system switch-access/switch-control events, or capture its
+   own? This is the biggest open design question and blocks deeper switch work.
+3. **UDP gaze protocol.** **Open.** Is Windows's existing format the right
+   cross-platform standard, or define a cleaner JSON/binary format?
+4. **Android eye-gaze path.** **Open.** Camera Switch presents as an
+   accessibility service; Tobii on Android presents as a mouse. Which first?
+5. **Dwell rendering in the IME/keyboard extension.** **Open.** Out of scope, or
+   a reduced-capability version?
+6. **Where does the access-method state live?** **Open.** Sidecar JSON (per
+   RFC 0007) vs. engine parameters (per RFC 0006).
+7. **UX research prerequisite.** **Resolved (2026-08-01) for promotion** — the
+   RFC moved out of `draft` once the canonical model was agreed. **Open** for the
+   access-screen IA: the compatibility matrix and the access-screen layout still
+   need user research with AAC users and clinicians.
+8. **Does Android need an `AccessibilityService`** for Switch Access alongside
+   the `InputMethodService`? **Open.** App-store and permission implications;
+   may warrant its own sub-RFC.
 
 ## Resolution
 
-- Status: _accepted (canonical model agreed; switch-access design still open)_
-- Decided by: _maintainers_
-- Date: _2026-08-01_
-- Decision: _The nine selection methods, the seven steering methods, and the
+- State: accepted
+- Decided by: maintainers
+- Date: 2026-08-01
+- Decision: The nine selection methods, the seven steering methods, and the
   compatibility matrix are normative. The selection → `SP_INPUT_FILTER` mapping
   is engine-owned and moves to `DasherCore/docs`. Steering methods stay
-  per-platform. The switch-access question (Q2) stays open and blocks deeper
-  switch work, not the model itself._
+  per-platform.
+- Open sub-questions: Q2 (switch-access design) is the main one — it blocks
+  deeper switch work, not the model. Q3–Q8 remain open.
 
 ## History
 

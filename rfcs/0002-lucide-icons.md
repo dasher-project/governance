@@ -211,14 +211,23 @@ maintenance burden described in Motivation.
 
 1. **`lucide-icons-swift` maintainership** — should we pin to a specific tagged
    release or track `main`? Should we consider forking preemptively?
+   **Open.** Low priority; the package is in use at 1.20+.
 2. **Accessibility labels** — should icon `aria-label` / accessibility
    identifier be derived from the Lucide icon name, or maintained separately?
-3. **Dark mode** — Lucide icons are monochrome so theming is straightforward,
-   but do we need separate "filled" variants for active states (e.g., solid
-   play vs outline play)?
-4. **visionOS** — does `lucide-icons-swift` render correctly in visionOS
-   windows, or do we need SF Symbols as a visionOS-specific fallback?
+   **Resolved (2026-08-01).** Icons are decorative monochrome marks; the
+   surrounding label text (`LucideLabel`) provides the accessible name.
+3. **Dark mode** — do we need separate "filled" variants for active states?
+   **Resolved (2026-08-01).** No. Icons are single-stroke monochrome and theme
+   through the stroke colour, per [RFC 0007](./0007-dark-mode-palettes.md).
+4. **visionOS** — does `lucide-icons-swift` render correctly in visionOS?
+   **Resolved (2026-08-01).** Yes — Lucide is in use across iOS, macOS, and
+   visionOS.
 
 ## Resolution
 
-_(To be filled in after community discussion.)_
+- State: implemented
+- Decided by: maintainers
+- Date: 2026-08-01
+- Decision: Lucide adopted on Dasher-Apple (`lucide-icons-swift`) and
+  Dasher-Windows (`Lucide.Avalonia`). GTK, Android, and web have not adopted it.
+- Open sub-questions: Q1 (pin/fork policy for the community Swift package).

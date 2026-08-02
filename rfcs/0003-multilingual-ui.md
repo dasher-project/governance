@@ -371,26 +371,31 @@ gracefully.
 
 1. **GTK C API adoption** — Should GTK switch to the C API (`dasher_set_locale`)
    for engine strings, or should DasherCore re-generate gettext `.po` files
-   alongside the JSON files? The C API route is recommended but requires GTK to
-   call through `dasher.h` instead of linking C++ classes directly.
+   alongside the JSON files? **Open.** GTK has not adopted the C API yet; the C
+   API route remains the recommendation.
 
 2. **Translation quality bar** — Do we ship machine translations immediately
-   (marked fuzzy), or wait for human review per language? What's the threshold
-   for "good enough" to appear in a release?
+   (marked fuzzy), or wait for human review per language? **Open.** No frontend
+   ships translations yet; the bar is undecided.
 
-3. **Locale vs. alphabet model** — The UI locale (interface language) and the
-   Dasher alphabet model (text output language) are independent. Should changing
-   the UI locale auto-suggest a matching alphabet model? (e.g., selecting French
-   suggests the French alphabet.) Or keep them fully decoupled?
+3. **Locale vs. alphabet model** — Should changing the UI locale auto-suggest a
+   matching alphabet model? **Open.** A UX decision; not yet wired.
 
-4. **Plural forms** — Some languages (Arabic, Russian, Polish) have complex
-   plural rules. Do any frontend strings need plural-aware translation? Most UI
-   strings are labels ("Play", "Copy") not count-based ("3 files"), so this may
-   be a non-issue, but onboarding/error messages could need it.
+4. **Plural forms** — Do any frontend strings need plural-aware translation?
+   **Resolved (2026-08-01).** Most UI strings are labels, not counts, so
+   plural-aware translation is a non-issue for v1.
 
-5. **Keyboard extension (iOS)** — The DasherKeyboard target has its own UI.
-   Does it share the same `.xcstrings` as the main app, or need a separate catalog?
+5. **Keyboard extension (iOS)** — Does `DasherKeyboard` share the same
+   `.xcstrings` as the main app, or need a separate catalog? **Open.** Decided
+   when iOS localisation lands.
 
 ## Resolution
 
-_(To be filled in after community discussion.)_
+- State: accepted
+- Decided by: maintainers
+- Date: 2026-08-01
+- Decision: The two-layer model is accepted. Engine strings localise through
+  `dasher_set_locale` (done — 33 locale files ship). Frontend chrome localises
+  through each platform's native catalog (not started on any frontend). This RFC
+  is the plan of record for the frontend work.
+- Open sub-questions: Q1, Q2, Q3, Q5.

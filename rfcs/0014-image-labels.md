@@ -301,26 +301,24 @@ Per [RFC 0011](./0011-testing.md):
 
 ## Unresolved questions
 
-1. **SVG support.** Should v1 accept SVG for crisp rendering at all sizes? It
-   adds parsing work per platform. PNG at 128×128 is simpler.
-2. **Runtime image-set switching.** Should a user swap image sets at runtime (for
-   example, Jolly Phonics ↔ PCS) without changing the alphabet XML? This could
-   be a frontend setting that overrides the image-directory prefix.
-3. **Image aspect-ratio handling.** Dasher boxes vary in aspect ratio. Images
-   could be stretched, letterboxed, or cropped. Text labels use one font size;
-   images may need different sizing logic. (See the honest assessment: this is
-   the open hard problem.)
+1. **SVG support.** **Open.** PNG at 128×128 for v1; SVG is a future option.
+2. **Runtime image-set switching.** **Open.** Could be a frontend setting that
+   overrides the image-directory prefix.
+3. **Image aspect-ratio handling.** **Open.** The hard problem — see the honest
+   assessment. Dasher boxes vary in aspect ratio; images could be stretched,
+   letterboxed, or cropped.
 
 ## Resolution
 
-- Status: _accepted (engine API implemented; macOS frontend implemented; uptake
-  is experimental and not planned for every platform)_
-- Decided by: _maintainers_
-- Date: _2026-08-01_
-- Decision: _The one-function C API lands. It is cheap in the engine. Frontend
+- State: implemented (engine API; macOS frontend; uptake is experimental and not
+  planned for every platform)
+- Decided by: maintainers
+- Date: 2026-08-01
+- Decision: The one-function C API lands. It is cheap in the engine. Frontend
   uptake stays with the platforms that have a concrete need. The dynamic
   sizing problem and the experimental phoneme work are recorded honestly so a
-  reader does not over-estimate the feature._
+  reader does not over-estimate the feature.
+- Open sub-questions: Q1, Q2, Q3.
 
 ## History
 

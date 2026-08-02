@@ -234,22 +234,26 @@ Rely on OS-level telemetry (Windows Diagnostic Data, macOS analytics).
 
 ## Unresolved questions
 
-1. **Who hosts the PostHog instance?** Will Wade initially? A cloud VM
-   under the dasher-project org? Cost implications?
-2. **Data retention period?** Propose 13 months (aligns with PostHog
-   defaults), but open to discussion.
+1. **Who hosts the PostHog instance?** **Resolved (2026-08-01).** A self-hosted
+   PostHog instance is live; Apple (iOS, macOS) and Windows ship against it.
+2. **Data retention period?** **Open.** Proposed 13 months (the PostHog default).
+   Confirm against the configured value on the live instance.
 3. **Should crash reporting be opt-in separately from usage analytics?**
-   Some projects allow crash reporting even when usage analytics are off.
-4. **Do we need a consent flow per platform, or is a single project-wide
-   privacy policy sufficient?**
-5. **Should the event schema live in DasherCore (shared) or in each
-   frontend repo?**
+   **Resolved (2026-08-01).** No. Crashes use the same opt-in, specified in
+   [RFC 0009](./0009-crash-reporting.md).
+4. **Do we need a consent flow per platform, or is a single project-wide privacy
+   policy sufficient?** **Resolved (2026-08-01).** One published event schema,
+   with a per-platform opt-in prompt (Apple and Windows ship it).
+5. **Should the event schema live in DasherCore (shared) or in each frontend
+   repo?** **Resolved (2026-08-01).** Per-frontend. Apple and Windows each ship
+   their own `analytics-events.json`.
 
 ## Resolution
 
-_(Filled in once a decision is reached — do not fill in when proposing.)_
-
-- Status: _pending_
-- Decided by: _pending_
-- Date: _pending_
-- Decision: _pending_
+- State: implemented
+- Decided by: maintainers
+- Date: 2026-08-01
+- Decision: Opt-in PostHog analytics shipped on Dasher-Apple (iOS, macOS) and
+  Dasher-Windows. GTK, Android, and web have not started. Crashes fold into the
+  same opt-in via [RFC 0009](./0009-crash-reporting.md).
+- Open sub-questions: Q2 (confirm the configured retention period).

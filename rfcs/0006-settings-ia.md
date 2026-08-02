@@ -339,17 +339,25 @@ overwhelmed, and the tier field already exists and is unused.
 
 ## Unresolved questions
 
-1. **Tier audit** — Who runs the card-sort study, and when? Can we crowdsource
-   tier validation from the community (e.g. a survey on the website)?
-2. **Alphabet selection in Simple mode** — Should we promote the alphabet
-   picker to `common` tier so Language tab appears in Simple? Or move alphabet
-   selection to the status bar (where it already lives on some platforms)?
-3. **Pro mode confirmation** — Speed bump or not? (Q4 above)
-4. **GTK timeline** — Dynamic manifest rendering is a prerequisite. When does
-   GTK adopt it?
-5. **Search** — Should we add a settings search bar alongside (not instead of)
-   the tier system?
+1. **Tier audit** — Who runs the card-sort study, and when? **Open.** The card
+   sort has not run; this blocks the three-tier UI.
+2. **Alphabet selection in Simple mode** — promote the alphabet picker to
+   `common` tier, or move it to the status bar? **Open.** Tied to the tier audit.
+3. **Pro mode confirmation** — speed bump or not? **Open.** The tier UI is not
+   built.
+4. **GTK timeline** — when does GTK adopt dynamic manifest rendering?
+   **Resolved (2026-08-01).** GTK now renders dynamically from the parameter
+   schema (the prerequisite is done); it still lacks tier filtering.
+5. **Search** — add a settings search bar alongside the tier system? **Open.** A
+   future enhancement.
 
 ## Resolution
 
-_(To be filled in after community discussion and end-user research.)_
+- State: implemented
+- Decided by: maintainers
+- Date: 2026-08-01
+- Decision: The tab structure and dynamic manifest rendering are implemented on
+  Apple, Windows, GTK, and web (Android partial). The three-tier (Simple /
+  Advanced / Pro) progressive disclosure is not implemented on any platform; it
+  is blocked on the tier-validation card sort.
+- Open sub-questions: Q1, Q2, Q3, Q5.

@@ -139,21 +139,24 @@ Per [RFC 0011](./0011-testing.md):
 
 ## Unresolved questions
 
-1. **Window length / pause threshold** — 5 s / 2 s proposed; tune with feedback?
-2. **Where the regular-use toggle lives** — "Output" group vs a new "Statistics"
-   group (RFC 0006 IA)?
-3. **Net vs gross WPM** — ship gross first, add net (error-adjusted) later?
+1. **Window length / pause threshold** — 5 s / 2 s proposed. **Resolved
+   (2026-08-01).** Shipped in the engine as a 5 s window with a 2 s pause freeze.
+2. **Where the regular-use toggle lives** — "Output" group or a new "Statistics"
+   group? **Resolved (2026-08-01).** Apple ships a Settings toggle
+   (`showTypingRate`) in the Output/statistics area.
+3. **Net vs gross WPM** — ship gross first? **Resolved (2026-08-01).** Yes; gross
+   for v1, net (error-adjusted) is a future option.
 4. **PostHog aggregate** — send session-average WPM as an analytics property?
-   (Privacy-safe; non-content.)
+   **Open.** Not sent today; privacy-safe, non-content.
 
 ## Resolution
 
-_(Filled in once a decision is reached — do not fill in when proposing.)_
-
-- Status: _pending_
-- Decided by: _pending_
-- Date: _pending_
-- Decision: _pending_
+- State: implemented
+- Decided by: maintainers
+- Date: 2026-08-01
+- Decision: Engine API (`dasher_get_wpm`, `dasher_get_cps`) shipped. Apple (iOS,
+  macOS) and web show live WPM. Windows, GTK, and Android pending.
+- Open sub-questions: Q4 (session-average WPM as an analytics property).
 
 ## History
 

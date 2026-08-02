@@ -207,22 +207,25 @@ Per [RFC 0011](./0011-testing.md). Defence-in-depth claims should name a test:
 ## Unresolved questions
 
 1. **Android IME process boundary** — should the IME also write a crash file, or
-   only the main app? (Proposal: both, suffixed filenames.)
+   only the main app? **Open.** Android crash reporting has not started.
 2. **Verbose-log opt-in** — copy and placement of "Send verbose logs with crash
-   reports" (Settings → Privacy, per RFC 0006).
-3. **Native symbolication** — accept unsymbolicated native frames in v1 (rely on
-   user-shared `.ips` / dialogs), or revisit a crash SDK later?
+   reports". **Open.** Not built.
+3. **Native symbolication** — accept unsymbolicated native frames, or revisit a
+   crash SDK later? **Resolved (2026-08-01).** v1 accepts unsymbolicated native
+   frames; rely on OS crash logs and user-shared `.ips` files (see "Out of
+   scope").
 4. **Crash-file format convergence** — switch macOS from JSON to the shared text
-   format, or accept both?
+   format, or accept both? **Open.**
 
 ## Resolution
 
-_(Filled in once a decision is reached — do not fill in when proposing.)_
-
-- Status: _pending_
-- Decided by: _pending_
-- Date: _pending_
-- Decision: _pending_
+- State: implemented
+- Decided by: maintainers
+- Date: 2026-08-01
+- Decision: Engine boundary capture and `dasher_has_engine_error` shipped
+  (DasherCore v0.1.6). Frontend crash reporting shipped on Dasher-Windows and
+  Dasher-Apple (macOS). iOS/visionOS production, GTK, and Android pending.
+- Open sub-questions: Q1, Q2, Q4.
 
 ## History
 

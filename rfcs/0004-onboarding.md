@@ -344,22 +344,22 @@ real Dasher canvas — a web simulation wouldn't reflect their setup.
 
 ## Unresolved questions
 
-1. **UX expert engagement** — Who do we engage, and what's the budget? Is this
-   a pro-bono advisory role or a paid consultation?
-2. **Is a passive demonstration step needed at all?** If the UX research says
-   yes, is it best served by a short video clip (no engine work), a fresh
-   auto-driver built to the current codebase, or by going straight into guided
-   practice? This is a research output, not an engineering decision.
-3. **Beginner mode persistence** — Should sibling suppression and path
-   correction be a first-run-only thing, or a persistent accessibility setting
-   (beginner mode toggle)?
-4. **Cross-platform consistency** — Should onboarding look identical across
-   platforms, or follow each platform's conventions (SwiftUI wizard vs. GTK
-   Assistant)?
-5. **Measurement** — How do we measure whether onboarding reduces abandonment?
-   Analytics (RFC 0001) could track: onboarding completion rate, time-to-first-
-   word, 7-day retention by onboarding path.
+1. **UX expert engagement** — Who do we engage, and what's the budget? **Open.**
+2. **Is a passive demonstration step needed at all?** **Open.** A research
+   output, not an engineering decision.
+3. **Beginner mode persistence** — first-run-only or a persistent setting?
+   **Open.**
+4. **Cross-platform consistency** — identical across platforms, or per-platform
+   conventions? **Open.**
+5. **Measurement** — how do we measure whether onboarding reduces abandonment?
+   **Open.** Analytics ([RFC 0001](./0001-analytics.md)) could track completion
+   rate, time-to-first-word, and retention by path.
 
 ## Resolution
 
-_(To be filled in after community discussion and UX consultation.)_
+- State: pending — open for discussion
+- Decided by: —
+- Date: —
+- Decision: Not yet accepted. The UX research ("Design questions needing UX
+  expert input") is a prerequisite, and no frontend ships onboarding yet.
+- Open sub-questions: all (see Unresolved questions).

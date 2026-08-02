@@ -1,10 +1,10 @@
 ---
 rfc: 0011
 title: Testing expectations for RFCs
-status: proposed
+status: active
 platforms: [apple, windows, gtk, android, web, core]
 created: 2026-06-28
-updated: 2026-06-28
+updated: 2026-08-01
 ---
 
 # Testing expectations for RFCs
@@ -21,6 +21,20 @@ RFC on one frontend knows both what to write and where to put it.
 This is guidance, **not a merge gate**: a missing or thin test plan does not
 block an RFC from going `active`. Reviewers are expected to ask about it; the
 author is expected to answer.
+
+## Implementation status
+
+Audited August 2026. Adopted in practice. The `Testing` section is in the
+template, and the README cross-references this RFC. It is guidance, not a gate.
+
+| Repo | Framework | State |
+| --- | --- | --- |
+| DasherCore | doctest (C++) | Mature; about 38 test files; the strongest layer. |
+| Dasher-Windows | xUnit | Active (for example, `PiiScrubberTests`). |
+| Dasher-Apple | XCTest | Files exist, but `project.yml` declares `testTargets: []`; the tests are not wired into a build target. |
+| Dasher-Mobile (Android) | JUnit 4 / AndroidX | Deps are in the version catalog; no test sources yet. |
+| dasher-web | None | No test runner is wired up. |
+| Dasher-GTK | doctest | Minimal (one dwell-click test). |
 
 ## Motivation
 

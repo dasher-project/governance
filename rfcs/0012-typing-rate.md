@@ -1,10 +1,10 @@
 ---
 rfc: 0012
 title: Typing rate (CPS / WPM) display
-status: proposed
+status: implemented
 platforms: [apple, windows, gtk, android, core]
 created: 2026-07-18
-updated: 2026-07-18
+updated: 2026-08-01
 ---
 
 # Typing rate (CPS / WPM) display
@@ -16,6 +16,19 @@ minute (WPM)** — live, over a short rolling window so it is responsive but
 stable. Always visible in **game mode**; **opt-in** during regular use via a
 Settings toggle. Computed **engine-side** (DasherCore) and exposed through the
 C API so every frontend displays the same number.
+
+## Implementation status
+
+Audited August 2026. The engine layer is done. DasherCore exposes
+`dasher_get_wpm` and `dasher_get_cps` (WPM = CPS × 12).
+
+| Platform | State | Notes |
+| --- | --- | --- |
+| Dasher-Apple (iOS, macOS) | Implemented | Live WPM, max, and average in the canvas overlay and in game mode; a Settings toggle (`showTypingRate`). CPS is not shown; only WPM. |
+| dasher-web | Implemented | Own JS engine; live WPM, peak WPM, and accuracy. Does not consume the DasherCore C API. |
+| Dasher-Windows | Not started | No WPM or CPS display. |
+| Dasher-GTK | Not started | The bundled DasherCore predates `dasher_get_wpm`. |
+| Dasher-Mobile (Android) | Not started | The bundled DasherCore fork predates this feature. |
 
 ## Motivation
 

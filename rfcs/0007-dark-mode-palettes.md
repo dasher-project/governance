@@ -1,10 +1,10 @@
 ---
 rfc: 0007
 title: Dark mode support via appearance-aware colour palettes
-status: proposed
+status: implemented
 platforms: [apple, windows, gtk, android, web, core]
 created: 2026-06-19
-updated: 2026-06-19
+updated: 2026-08-01
 ---
 
 # Dark mode support via appearance-aware colour palettes
@@ -20,6 +20,20 @@ between light and dark. No new rendering path is introduced: dark
 palettes are ordinary palettes that inherit a light palette via the
 existing `parentName` mechanism and override only the UI chrome
 colours (background, labels, outlines, info/warning boxes).
+
+## Implementation status
+
+Audited August 2026. The engine layer is done. DasherCore exposes the appearance
+mode, the system-appearance input, the dual palette preferences, and the
+companion lookup. Eight dark companion palettes ship.
+
+| Platform | Canvas (engine palettes) | App chrome |
+| --- | --- | --- |
+| Dasher-Apple | Implemented (System / Light / Dark; separate light and dark pickers) | Implemented (asset-catalog dark variants) |
+| Dasher-Windows | Implemented | Implemented (theme dictionaries) |
+| Dasher-GTK | Partial (the palette chooser follows the engine) | Not implemented (the window chrome does not follow the OS) |
+| Dasher-Mobile (Android) | Partial | Partial (the system chrome follows; the custom UI hardcodes light colours) |
+| dasher-web | Not started | Not started |
 
 ## Motivation
 

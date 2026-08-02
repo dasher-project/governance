@@ -1,10 +1,10 @@
 ---
 rfc: 0001
 title: Privacy-preserving analytics and crash reporting
-status: proposed
+status: implemented
 platforms: [apple, windows, gtk, android]
 created: 2026-06-17
-updated: 2026-06-28
+updated: 2026-08-01
 ---
 
 # Privacy-preserving analytics and crash reporting
@@ -18,6 +18,24 @@ which input methods and languages — and to get visibility into crashes —
 without ever collecting what users type. Collection is strictly opt-in via
 a first-run prompt, the event schema is published openly in the repo, and
 no personally identifiable information is sent.
+
+## Implementation status
+
+Audited August 2026. Implemented on Apple and Windows; not started on GTK,
+Android, or web.
+
+| Platform | State | Notes |
+| --- | --- | --- |
+| Dasher-Apple (iOS, macOS) | Implemented | PostHog SDK wired in; opt-in prompt; seven-event schema; Settings toggle and reset-ID control. |
+| Dasher-Apple (visionOS) | Partial | The SDK is linked, but the opt-in prompt is not shown, so reports do not leave the device until the user opts in elsewhere. |
+| Dasher-Windows | Implemented | PostHog SDK; opt-in dialog; published schema. |
+| Dasher-GTK | Not started | No analytics code. |
+| Dasher-Mobile (Android) | Not started | No analytics code. |
+| dasher-web | Not started | No analytics code. |
+
+The self-hosted PostHog instance and the open event schema are the agreed
+direction. One event in the schema (`input_method_changed`) is not emitted on
+any platform yet.
 
 ## Motivation
 

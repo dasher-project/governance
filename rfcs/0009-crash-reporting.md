@@ -1,10 +1,10 @@
 ---
 rfc: 0009
 title: Crash reporting & engine diagnostics capture
-status: proposed
+status: implemented
 platforms: [apple, windows, gtk, android, core]
 created: 2026-06-28
-updated: 2026-06-29
+updated: 2026-08-01
 ---
 
 # Crash reporting & engine diagnostics capture
@@ -21,6 +21,20 @@ time — never from the crashing process itself.
 This extends RFC 0001, which left crash detail open. Reference implementation:
 **Dasher-Windows**; macOS implemented; iOS/visionOS (production), GTK, and
 Android pending.
+
+## Implementation status
+
+Audited August 2026. The engine layer is done. DasherCore catches exceptions at
+the C-API boundary, routes them through the log callback, and exposes
+`dasher_has_engine_error`.
+
+| Platform | State | Notes |
+| --- | --- | --- |
+| Dasher-Windows | Implemented | Reference implementation: `AppDomain.UnhandledException`, crash file, PII scrubber with tests. |
+| Dasher-Apple (macOS) | Implemented | `NSSetUncaughtExceptionHandler` plus an alive-marker unclean-shutdown detector. PostHog is the sole channel (macOS has no TestFlight). |
+| Dasher-Apple (iOS, visionOS) | Not started in production | Betas lean on TestFlight. The PostHog `$exception` path for production builds is pending. Caught engine errors are reported through `captureEngineError` on all Apple targets. |
+| Dasher-GTK | Not started | No signal handler or crash file. |
+| Dasher-Mobile (Android) | Not started | No `UncaughtExceptionHandler`; no native signal shim. |
 
 ## The contract
 

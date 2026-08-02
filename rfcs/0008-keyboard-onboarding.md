@@ -4,7 +4,7 @@ title: Keyboard extension / IME onboarding (Apple & Android)
 status: proposed
 platforms: [apple, android, core]
 created: 2026-06-28
-updated: 2026-06-28
+updated: 2026-08-01
 ---
 
 # Keyboard extension / IME onboarding (Apple & Android)
@@ -25,6 +25,19 @@ detects the keyboard's enablement state and walks the user through enabling it,
 with deep-links into the exact system screens. It complements the generic
 first-run onboarding in [RFC 0004](./0004-onboarding.md), which deliberately did
 not cover the keyboard-enablement step.
+
+## Implementation status
+
+Audited August 2026. Not implemented.
+
+- Dasher-Apple ships the iOS keyboard extension, but the host app has no
+  enablement guide, no Full Access check, and no deep link into the system
+  settings. The host app never mentions the keyboard.
+- Dasher-Mobile ships the Android IME (`InputMethodService`), but there is no
+  in-app flow to guide the user to enable or select it.
+
+The shared state model and the deep-link flow described in this RFC have not been
+built on either platform.
 
 ## Motivation
 

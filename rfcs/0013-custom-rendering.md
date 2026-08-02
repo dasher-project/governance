@@ -295,21 +295,21 @@ Per [RFC 0011](./0011-testing.md):
 
 ## Unresolved questions
 
-1. **Should the engine still emit opcode 7 (cube data)** for frontends that want
-   the two-pass approach, or withdraw it entirely in favour of node-tree
-   rendering? (Recommendation: withdraw.)
-2. **Colour palette access.** Should the API expose the palette directly
+1. **Should the engine still emit opcode 7 (cube data)** for the two-pass
+   approach, or withdraw it? **Open.** Recommendation: withdraw.
+2. **Colour palette access.** **Open.** Expose the palette directly
    (`dasher_get_palette_colors`), or only the per-node colours in
    `dasher_node_info`?
 
 ## Resolution
 
-- Status: _accepted (engine API implemented; no production frontend yet)_
-- Decided by: _maintainers_
-- Date: _2026-08-01_
-- Decision: _The C API lands as the second rendering path. It is opt-in and
-  coexists with the command buffer. There is no plan to bring it to every
-  platform; it exists for frontends that need full visual control._
+- State: accepted (engine API implemented; no production frontend yet)
+- Decided by: maintainers
+- Date: 2026-08-01
+- Decision: The node-tree API lands as the second rendering path. It is opt-in
+  and coexists with the command buffer. There is no plan to bring it to every
+  platform; it exists for frontends that need full visual control.
+- Open sub-questions: Q1, Q2.
 
 ## History
 

@@ -208,26 +208,21 @@ must be plain-language and localised — they are the scariest step.
 
 ## Unresolved questions
 
-1. **Default-IME detection on Android < 14.** What is the most reliable heuristic
-   that doesn't require a privileged permission? Proposal: treat "enabled and
-   only one IME enabled" as `ready`, else `enabledNotDefault`.
-2. **Re-prompt cadence.** How often should the banner re-appear if the user
-   dismisses it? Once per app launch? Once ever (until they re-open the flow from
-   Settings)?
-3. **Full Access messaging.** Is the AAC-specific framing ("needed so Dasher can
-   speak what you write and remember your training") the right one, or does it
-   over-promise?
+1. **Default-IME detection on Android < 14.** **Open.** Most reliable unprivileged
+   heuristic still to be chosen.
+2. **Re-prompt cadence.** **Open.** Not yet decided.
+3. **Full Access messaging.** **Open.** Copy to be finalised.
 4. **IME-engine sharing.** Should the onboarding flag live in the shared
-  `userDir` (so the IME can also see it) or in the main app's private prefs?
-5. **Does this warrant a small DasherCore C API** (e.g. a "mark keyboard
-   onboarding complete" persisted flag) so all frontends share the SSOT, or is
-   per-frontend persistence correct?
+   `userDir` or in the main app's private prefs? **Open.**
+5. **Does this warrant a small DasherCore C API** ("mark keyboard onboarding
+   complete") so all frontends share the SSOT, or is per-frontend persistence
+   correct? **Open.**
 
 ## Resolution
 
-_(Filled in once a decision is reached — do not fill in when proposing.)_
-
-- Status: _pending_
-- Decided by: _pending_
-- Date: _pending_
-- Decision: _pending_
+- State: pending — open for discussion
+- Decided by: —
+- Date: —
+- Decision: Not yet accepted. No frontend ships the keyboard-enablement flow on
+  Apple or Android.
+- Open sub-questions: all (see Unresolved questions).

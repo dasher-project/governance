@@ -73,16 +73,24 @@ but reviewers are expected to ask about it.
 
 ## Unresolved questions
 
-What do you want input on before this is finalised?
+What do you want input on before this is finalised? Mark each item as it
+evolves: **Resolved (YYYY-MM-DD).** / **Open.** / **Superseded.** An RFC that is
+`active` or `implemented` is accepted overall; it may still carry named open
+sub-questions (list them in Resolution under "Open sub-questions").
 
 ## Resolution
 
 _(Filled in once a decision is reached — do not fill in when proposing.)_
 
-- Status: _accepted / rejected_
+- State: _pending — open for discussion | accepted | implemented | rejected | withdrawn_
 - Decided by: _maintainers + stewards_
 - Date: _YYYY-MM-DD_
-- Decision: _short rationale_
+- Decision: _short rationale; for `implemented`, name where it shipped_
+- Open sub-questions: _none, or list by number — see Unresolved questions_
+
+`State` mirrors the lifecycle: `pending` while `draft`/`proposed`; `accepted`
+when `active`; `implemented` when landed. Acceptance does not require every
+sub-question closed — name the ones that stay open.
 
 ## History
 

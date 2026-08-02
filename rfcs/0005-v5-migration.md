@@ -573,31 +573,31 @@ because it allows v6 to evolve its storage independently.
 
 ## Unresolved questions
 
-1. **Where does v6 store user data on Windows?** The RFC proposes
-   `%APPDATA%\Dasher\` but this should be confirmed. Windows convention
-   is `%LOCALAPPDATA%\Dasher\` for per-machine data.
+1. **Where does v6 store user data on Windows?** **Resolved (2026-08-01).**
+   Settled by the shipped Windows implementation; see `V5MigrationService` in
+   Dasher-Windows.
 
-2. **Should we bundle common v5 fonts?** Steve Saling uses "Alaska" and
-   "CG Omega". If these are freely redistributable, bundling them would
-   make the migration seamless. Licensing needs checking.
+2. **Should we bundle common v5 fonts?** **Open.** Licensing for "Alaska" and
+   "CG Omega" is unclear; they are not bundled today.
 
-3. **Should the migration be re-runnable?** The RFC proposes an opt-in
-   migration with a Settings > Migration panel for re-import. Should
-   there be a limit on re-runs?
+3. **Should the migration be re-runnable?** **Resolved (2026-08-01).** Yes. The
+   Settings re-import panel shipped on macOS and Windows.
 
-4. **GTK/Linux paths**: Need to verify `~/.dasher/` is still correct and
-   determine where v6 GTK should store user data (XDG `~/.local/share/Dasher/`?).
-   Deferred until GTK frontend exists.
+4. **GTK/Linux paths**: **Open.** GTK migration has not started; verify `~/.dasher/`
+   and the v6 XDG path when it does.
 
-5. **v5 colour index semantics**: v6 may have changed colour index
-   assignments. If a user's custom colour XML assigns specific indices
-   (e.g., index 10 = green for letters), do these still map correctly
-   in v6's rendering engine?
+5. **v5 colour index semantics**: **Resolved (2026-08-01).** Colour XML migrates
+   as-is and parses (the legacy `<colours>` spelling is still supported). No index
+   remapping is needed.
 
-6. **Adaptive training privacy**: The training file contains text the
-   user has typed. Migrating it is essential for prediction quality but
-   means copying potentially sensitive text. Should we warn the user?
+6. **Adaptive training privacy**: **Resolved (2026-08-01).** Training files copy
+   as-is; the opt-in migration prompt tells the user what is imported.
 
 ## Resolution
 
-_(To be filled in after community discussion.)_
+- State: implemented
+- Decided by: maintainers
+- Date: 2026-08-01
+- Decision: One-shot, opt-in migration shipped on Dasher-Apple (macOS) and
+  Dasher-Windows, with a Settings re-import panel. GTK pending.
+- Open sub-questions: Q2 (bundling v5 fonts), Q4 (GTK/Linux paths).

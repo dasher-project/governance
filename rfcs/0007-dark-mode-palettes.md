@@ -356,23 +356,26 @@ companion lookup covers legacy palettes in the meantime.
 
 ## Unresolved questions
 
-1. **Naming convention** for dark variants — should we standardise on a
-   `"<Name> Dark"` suffix (as shipped), or a separate `appearance`-keyed
-   namespace? A suffix is simpler for the bidirectional companion lookup.
-2. **Default mode for fresh installs** — `SYSTEM` (follow the OS, proposed) vs
-   `LIGHT` (preserve historical Dasher behaviour). With `SYSTEM` and a default
-   `system_appearance = LIGHT`, out-of-the-box rendering is unchanged until a
-   frontend reports otherwise; confirming `SYSTEM` as the default is the open
-   question.
-3. **Settings UI shape** — a single palette list with appearance badges plus a
-   System/Light/Dark mode control, or separate Light/Dark palette pickers (which
-   the dual-preference model already supports)? This may warrant a follow-up to
-   RFC 0006 (settings IA).
-4. **Per-alphabet dark overrides** — some alphabets (e.g. Thai, with its own
-   colour sequences) may need darker-specific group colours. Should we allow a
-   dark palette to override `nodeLabelColorSequence` per group, or is flipping
-   the default label colour always enough?
+1. **Naming convention** for dark variants. **Resolved (2026-08-01).** Standardise
+   on a `"<Name> Dark"` suffix, as shipped.
+2. **Default mode for fresh installs** — `SYSTEM` or `LIGHT`? **Resolved
+   (2026-08-01).** `SYSTEM` is the default; out-of-box rendering is unchanged
+   until a frontend reports the OS appearance.
+3. **Settings UI shape** — a single palette list with badges, or separate
+   Light/Dark pickers? **Resolved (2026-08-01).** Apple ships separate light/dark
+   pickers plus a System/Light/Dark mode control; other frontends follow the same
+   engine API.
+4. **Per-alphabet dark overrides** — allow a dark palette to override
+   `nodeLabelColorSequence` per group, or is flipping the default label colour
+   enough? **Open.** Only the default label colour is flipped today; per-alphabet
+   overrides are not done.
 
 ## Resolution
 
-_(To be filled in after community discussion.)_
+- State: implemented
+- Decided by: maintainers
+- Date: 2026-08-01
+- Decision: The appearance model (mode, system input, dual palette preferences,
+  companion lookup) and eight dark companion palettes shipped in DasherCore.
+  Apple and Windows apply it end-to-end; GTK and Android apply the canvas only.
+- Open sub-questions: Q4 (per-alphabet dark overrides).

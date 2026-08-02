@@ -76,3 +76,4 @@ means "landed on some platforms, not all."
 | [0012](./0012-typing-rate.md) | Typing rate (CPS / WPM) display | implemented | apple, windows, gtk, android, core |
 | [0013](./0013-custom-rendering.md) | Node-tree rendering API (custom rendering) | active | apple, windows, gtk, android, web, core |
 | [0014](./0014-image-labels.md) | Image labels for alphabet symbols | implemented | apple, windows, gtk, android, web, core |
+| [0015](./0015-usahp-switch-source.md) | USAHP switch source — local switch-event broker for switch capture | proposed | apple, windows, gtk, android, web, core |

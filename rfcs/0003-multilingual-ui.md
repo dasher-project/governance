@@ -16,8 +16,33 @@ and enum values via a JSON runtime system (`dasher_set_locale`). However, every
 frontend's own UI chrome (toolbar buttons, settings tabs, onboarding, dialogs)
 is **hardcoded English** with no native localization wired up. This RFC
 proposes a per-platform localization strategy for frontend strings so that
-users get a fully localised experience — engine *and* UI — and aligns the
-language picker so all 33 DasherCore locales are exposed everywhere.
+users get a fully localised experience — engine *and* UI. The **interface
+language follows the OS** (no in-app language picker); the **alphabet** is the
+user's "writing language" control and is deliberately decoupled from the
+interface language. See "Language selection principle".
+
+## Language selection principle
+
+The interface language (chrome + engine parameter labels) **follows the OS**.
+There is **no in-app "App Language" picker**.
+
+- iOS 13+, macOS, and Windows already provide a **per-app language choice in
+  System Settings** that changes the whole UI immediately, with no relaunch. A
+  custom in-app picker would duplicate this and, on Apple platforms, could only
+  switch the engine locale — not the chrome — which is confusing. So frontends
+  do not ship one.
+- The engine locale (`dasher_set_locale`) is set to the device language on
+  launch, so the **parameter labels** follow the OS too.
+- Users change Dasher's language in **Settings → Dasher → Language** (iOS), the
+  equivalent per-app setting (macOS / Windows), or the device language.
+
+The **alphabet** (Settings → Language → Alphabet) is the **writing-language
+control**, and is **independent** of the interface language. A user can run an
+English UI and write in French, Arabic, or a phoneme set by selecting that
+alphabet. The alphabet never changes the interface language, and the interface
+language never forces an alphabet.
+
+This resolves Q3: the UI locale and the alphabet model are independent.
 
 ## Implementation status
 
@@ -32,14 +57,16 @@ English on every frontend. No frontend ships `.xcstrings`, `.resx`, `.po`, or
 
 | Platform | Engine strings | App chrome |
 | --- | --- | --- |
-| Dasher-Apple | Localised (9 locales in the picker) | English only |
-| Dasher-Windows | Localised (10 locales in the picker) | English only |
+| Dasher-Apple | Follows the OS (engine locale set to the device language on launch; no in-app picker) | Catalog (`Localizable.xcstrings`) shipping 32 machine translations; follows the OS |
+| Dasher-Windows | Localised (engine locale) | English only |
 | Dasher-GTK | Not bound (the gettext domain is never set) | English only |
 | Dasher-Mobile (Android) | Partial | English only; one `values/` bucket, no translations ship |
 
-The next step is to wrap frontend strings in each platform's native catalog and
-bind the locale list to `locales.json`. The RTL work (Arabic, Persian, Urdu) has
-not started.
+Apple removed its in-app language picker; both chrome and engine labels now
+follow the OS (per the Language selection principle). Other frontends should do
+the same: localise the chrome to follow the OS, do not add a language picker,
+and expose the alphabet as the writing-language control. The RTL work (Arabic,
+Persian, Urdu) has not been verified end-to-end on any frontend.
 
 ## Motivation
 
@@ -171,7 +198,10 @@ the locale list stays in sync without manual updates.
   DasherKeyboard, DasherVision).
 - Use `String(localized:)` / `LocalizedStringKey` in SwiftUI views and
   `NSLocalizedString` in UIKit.
-- Xcode auto-extracts strings from Swift source into the catalog.
+- Manage the catalog from source, **not** via Xcode's "Auto Extract
+  Translations from Code" (which mutates the committed catalog on every build).
+  Dasher-Apple extracts strings with `Localization/extract-chrome.py` and merges
+  translations with `merge-translations.py`; keep auto-extract off.
 - Ship `.lproj` folders for each locale, or use the single `.xcstrings` catalog
   (Xcode 15+ merges all languages into one file).
 - **RTL:** Set `Environment(\.layoutDirection)` based on locale; SwiftUI handles
@@ -379,7 +409,10 @@ gracefully.
    ships translations yet; the bar is undecided.
 
 3. **Locale vs. alphabet model** — Should changing the UI locale auto-suggest a
-   matching alphabet model? **Open.** A UX decision; not yet wired.
+   matching alphabet model? **Resolved (2026-08-02).** They are independent: the
+   UI locale follows the OS (no in-app picker), and the alphabet is the
+   user-chosen writing-language control. No auto-suggest. See "Language
+   selection principle".
 
 4. **Plural forms** — Do any frontend strings need plural-aware translation?
    **Resolved (2026-08-01).** Most UI strings are labels, not counts, so
@@ -396,6 +429,17 @@ gracefully.
 - Date: 2026-08-01
 - Decision: The two-layer model is accepted. Engine strings localise through
   `dasher_set_locale` (done — 33 locale files ship). Frontend chrome localises
-  through each platform's native catalog (not started on any frontend). This RFC
-  is the plan of record for the frontend work.
-- Open sub-questions: Q1, Q2, Q3, Q5.
+  through each platform's native catalog. The **interface language follows the
+  OS** (no in-app language picker; engine locale set to the device language on
+  launch), and the **alphabet is the decoupled writing-language control** (see
+  "Language selection principle"). This RFC is the plan of record for the
+  frontend work.
+- Open sub-questions: Q1, Q2, Q5. (Q3 resolved.)
+
+## History
+
+- 2026-08-02 — added the "Language selection principle": the interface language
+  follows the OS (no in-app language picker; engine locale follows the device
+  language), and the alphabet is the independent writing-language control.
+  Resolved Q3. Reflects the Dasher-Apple implementation, which removed its
+  in-app picker and ships a 32-locale chrome catalog that follows the OS.

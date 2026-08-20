@@ -142,7 +142,7 @@ DasherCore v0.1.6 makes the engine a first-party participant:
   ask the user to relaunch). `dasher_reset` does **not** clear it; only engine
   recreation does.
   *Platform divergence (August 2026):* the shipped frontends implement the
-  **detection and reporting** half — the flag is polled once per frame and
+  **detection and reporting** half — the flag is polled each frame until it fires and
   reported exactly once per session as a non-fatal `$exception`
   (`exception_type=DasherEngineError`, documented as its own `engine_error`
   entry in each frontend's `analytics-events.json`) — but none yet implements

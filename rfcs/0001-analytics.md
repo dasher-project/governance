@@ -4,7 +4,7 @@ title: Privacy-preserving analytics and crash reporting
 status: implemented
 platforms: [apple, windows, gtk, android]
 created: 2026-06-17
-updated: 2026-08-01
+updated: 2026-08-20
 ---
 
 # Privacy-preserving analytics and crash reporting
@@ -21,8 +21,8 @@ no personally identifiable information is sent.
 
 ## Implementation status
 
-Audited August 2026. Implemented on Apple and Windows; not started on GTK,
-Android, or web.
+Audited August 2026 (re-audited 2026-08-20 against the live PostHog project).
+Implemented on Apple, Windows, and Android; not started on GTK or web.
 
 | Platform | State | Notes |
 | --- | --- | --- |
@@ -30,8 +30,35 @@ Android, or web.
 | Dasher-Apple (visionOS) | Partial | The SDK is linked, but the opt-in prompt is not shown, so reports do not leave the device until the user opts in elsewhere. |
 | Dasher-Windows | Implemented | PostHog SDK; opt-in dialog; published schema. |
 | Dasher-GTK | Not started | No analytics code. |
-| Dasher-Mobile (Android) | Not started | No analytics code. |
+| Dasher-Mobile (Android) | Implemented | PostHog SDK; opt-in prompt; published schema; crash reporting via captureException. |
 | dasher-web | Not started | No analytics code. |
+
+### 2026-08-20 live audit findings and fixes
+
+An audit of the live PostHog project found and fixed three deviations:
+
+1. **Location data was being collected (Apple and Android).** PostHog Cloud
+   enriches every event with `$geoip_*` properties — city, postal code, and
+   latitude/longitude — derived from the client IP. This happens even with the
+   project's *anonymize IPs* setting enabled, and violates this RFC's
+   "no location data" promise. Fixed by sending `$geoip_disable: true` on
+   every event (the only Cloud-level control). Historical events already
+   enriched retain location properties until retention expires.
+2. **Windows events had no `$os`.** The dotnet SDK sends no OS context, so
+   OS breakdowns in PostHog only showed Apple/Android data. Fixed by setting
+   `$os` explicitly on Windows. Android's SDK-supplied `$os` is the coarse
+   string "Android"; version granularity lives in `os_version` on all
+   platforms.
+3. **Apple was auto-collecting lifecycle events** (`Application Opened`,
+   `Application Backgrounded`, `Application Installed`) not present in the
+   published schema, violating "if it's not in the schema, it's not
+   collected". Fixed by disabling `captureApplicationLifecycleEvents`.
+
+**Hosting note:** the live instance is **PostHog Cloud EU**
+(`eu.i.posthog.com`), not the self-hosted deployment this RFC originally
+resolved on. Maintainers should either amend the resolution to accept Cloud
+EU or stand up the self-hosted instance and migrate the frontends' host
+configuration.
 
 The self-hosted PostHog instance and the open event schema are the agreed
 direction. One event in the schema (`input_method_changed`) is not emitted on

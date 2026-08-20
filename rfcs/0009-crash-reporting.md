@@ -33,8 +33,8 @@ the C-API boundary, routes them through the log callback, and exposes
 | Dasher-Windows | Implemented | Reference implementation: `AppDomain.UnhandledException`, crash file, PII scrubber with tests. |
 | Dasher-Apple (macOS) | Implemented | `NSSetUncaughtExceptionHandler` plus an alive-marker unclean-shutdown detector. PostHog is the sole channel (macOS has no TestFlight). |
 | Dasher-Apple (iOS, visionOS) | Not started in production | Betas lean on TestFlight. The PostHog `$exception` path for production builds is pending. Caught engine errors are reported through `captureEngineError` on all Apple targets. |
-| Dasher-GTK | Not started | No signal handler or crash file. |
-| Dasher-Mobile (Android) | Not started | No `UncaughtExceptionHandler`; no native signal shim. |
+| Dasher-GTK | Implemented | `std::set_terminate` + SIGSEGV/SIGABRT/SIGILL handlers writing a synchronous crash file, PII scrubber, and PostHog `$exception` flush on next launch — all landed in `1c7f4d9` (2026-07-18). Sticky engine-error reporting per Amendment A2 below added in [Dasher-GTK #41](https://github.com/dasher-project/Dasher-GTK/pull/41). |
+| Dasher-Mobile (Android) | Implemented | JVM `UncaughtExceptionHandler`; crash file for pre-consent crashes flushed as `$exception` on a later opt-in launch ([Dasher-Android #3](https://github.com/dasher-project/Dasher-Android/pull/3)); engine-error reporting + locales parity in [#7](https://github.com/dasher-project/Dasher-Android/pull/7). A native (JNI) signal shim remains open — SIGSEGV inside `libdasher.so` is not yet caught. |
 
 ## The contract
 
@@ -141,6 +141,15 @@ DasherCore v0.1.6 makes the engine a first-party participant:
   calling frame, surface a message, then `dasher_destroy` + `dasher_create` (or
   ask the user to relaunch). `dasher_reset` does **not** clear it; only engine
   recreation does.
+  *Platform divergence (August 2026):* the shipped frontends implement the
+  **detection and reporting** half — the flag is polled each frame until it fires and
+  reported exactly once per session as a non-fatal `$exception`
+  (`exception_type=DasherEngineError`, documented as its own `engine_error`
+  entry in each frontend's `analytics-events.json`) — but none yet implements
+  the **recovery** half (stop-frame + destroy/recreate). The flag is sticky, so
+  an errored engine keeps no-op'ing safely; recovery UX is deferred until a
+  real-world occurrence is observed. Called out here rather than diverging
+  silently.
 - **What this does NOT catch:** SEGV/SIGBUS (signals — owned by the per-platform
   handlers/unclean-marker), stack overflow, `DASHER_ASSERT` under `NDEBUG` (a
   no-op in release), and exceptions from destructors (`std::terminate`).

@@ -4,7 +4,7 @@ title: "Dasher v5 → v6 migration: settings, alphabets, and user data"
 status: implemented
 platforms: [apple, windows, gtk]
 created: 2026-06-18
-updated: 2026-08-01
+updated: 2026-08-21
 ---
 
 # Dasher v5 → v6 migration: settings, alphabets, and user data
@@ -276,6 +276,30 @@ categories of genuinely-missing functionality are:
 The migration report should list these as "Not yet available" rather
 than silently dropping them. This transparency builds trust with
 long-time users who may be looking for specific functionality.
+
+### Behaviour parity beyond settings
+
+Migrating the stored values is not enough if the v6 UI then clamps or
+reinterprets them. Two requirements for every frontend, learned from a v6
+first-impressions report (2026-08) where a v5 user's speed was unreachable and
+"New" did not reset context:
+
+1. **Speed controls must accept the full v5 range.** v5's UI offered
+   0.1–8.0 (`MaxBitRateTimes100` = raw 10–800; Steve Saling's 700 is a real
+   value). Migration must write `LP_MAX_BITRATE` **directly** — the
+   `dasher_set_speed_percent` helper clamps to 20–400 %, i.e. raw 32–640,
+   which silently truncates the top of v5's range — and every speed control
+   (footer spinners, mini-bars) must accept at least raw 10–800, taking its
+   range from the engine manifest rather than hardcoding. Dasher-GTK's footer
+   capped at 400 until [Dasher-GTK #51](https://github.com/dasher-project/Dasher-GTK/pull/51);
+   the engine manifest allows 1–1000.
+2. **"New" is a full reset.** v5's New cleared the editor *and* dropped the
+   prediction context (via `SetBuffer(0)`). The v6 equivalent is
+   `dasher_reset()` (clear text **and** restart the model), not
+   `dasher_reset_output_text()` (clear text, keep the learned position — the
+   canvas resumes mid-sentence). Dasher-Windows and Dasher-Apple already did
+   this; Dasher-GTK was aligned in #51. "Open file" keeps using the softer
+   `dasher_reset_output_text()`.
 
 ### Custom user data migration
 
@@ -601,3 +625,11 @@ because it allows v6 to evolve its storage independently.
 - Decision: One-shot, opt-in migration shipped on Dasher-Apple (macOS) and
   Dasher-Windows, with a Settings re-import panel. GTK pending.
 - Open sub-questions: Q2 (bundling v5 fonts), Q4 (GTK/Linux paths).
+
+## History
+
+- _2026-06-18_ — _(initial proposal)_
+- _2026-08-01_ — _implementation-status audit; resolution recorded_
+- _2026-08-21_ — _added "Behaviour parity beyond settings" (speed-range floor
+  of raw 10–800, New = full reset) after a v6 first-impressions report;
+  see [Dasher-GTK #51](https://github.com/dasher-project/Dasher-GTK/pull/51)_

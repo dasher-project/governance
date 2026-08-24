@@ -22,14 +22,14 @@ no personally identifiable information is sent.
 ## Implementation status
 
 Audited August 2026 (re-audited 2026-08-20 against the live PostHog project).
-Implemented on Apple, Windows, and Android; not started on GTK or web.
+Implemented on Apple, Windows, Android, and GTK; not started on web.
 
 | Platform | State | Notes |
 | --- | --- | --- |
 | Dasher-Apple (iOS, macOS) | Implemented | PostHog SDK wired in; opt-in prompt; seven-event schema; Settings toggle and reset-ID control. |
 | Dasher-Apple (visionOS) | Partial | The SDK is linked, but the opt-in prompt is not shown, so reports do not leave the device until the user opts in elsewhere. |
 | Dasher-Windows | Implemented | PostHog SDK; opt-in dialog; published schema. |
-| Dasher-GTK | Not started | No analytics code. |
+| Dasher-GTK | Implemented | Custom libcurl transport + offline queue + first-run consent ([Dasher-GTK #24](https://github.com/dasher-project/Dasher-GTK/pull/24), [#32](https://github.com/dasher-project/Dasher-GTK/pull/32)); crash capture per RFC 0009. Not yet in a tagged release, so no GTK events appear in PostHog. |
 | Dasher-Mobile (Android) | Implemented | PostHog SDK; opt-in prompt; published schema; crash reporting via captureException. |
 | dasher-web | Not started | No analytics code. |
 
@@ -61,8 +61,9 @@ EU or stand up the self-hosted instance and migrate the frontends' host
 configuration.
 
 The self-hosted PostHog instance and the open event schema are the agreed
-direction. One event in the schema (`input_method_changed`) is not emitted on
-any platform yet.
+direction. `input_method_changed` is now emitted by Dasher-Windows and
+Dasher-Android (confirmed in live data, August 2026); Apple and GTK still
+do not emit it.
 
 ## Motivation
 

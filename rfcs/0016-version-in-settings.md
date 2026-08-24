@@ -23,7 +23,7 @@ analytics opt-in.
 | --- | --- | --- |
 | Dasher-GTK | Implemented | `Preferences → Privacy`, `DASHER_GTK_VERSION` compile definition (same source analytics already uses). |
 | Dasher-Android | Implemented | `Settings → Privacy`, `BuildConfig.VERSION_NAME` (same source analytics already uses). |
-| Dasher-Windows | Issue filed | Version exists in analytics + update checks; needs the Settings row. |
+| Dasher-Windows | Implemented | `Settings → Privacy`, bottom line; `UpdateChecker.GetCurrentVersion()` — the same source analytics and update checks already use. |
 | Dasher-Apple | Issue filed | Version exists in analytics; needs the Settings row (macOS/iOS/visionOS). |
 | dasher-web | Issue filed | Needs the row in its settings surface. |
 
@@ -121,3 +121,8 @@ assertion would restate the code.
   the remaining frontends. Placement in Privacy is explicitly interim pending
   RFC 0006's About section.
 - Open sub-questions: 1, 2 (engine version display; build metadata).
+
+## History
+
+- _2026-08-22_ — _(initial proposal; accepted directly, GTK and Android implemented immediately, issues filed for the remaining frontends)_
+- _2026-08-24_ — _(Windows implemented — version line at the bottom of Settings → Privacy, closing [Dasher-Windows #29](https://github.com/dasher-project/Dasher-Windows/issues/29))_

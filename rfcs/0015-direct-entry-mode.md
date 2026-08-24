@@ -27,7 +27,7 @@ Audited August 2026.
 
 | Platform | State | Notes |
 | --- | --- | --- |
-| Dasher-Windows | Implemented | `SendInput` with `KEYEVENTF_UNICODE`; canvas-only topmost `WS_EX_NOACTIVATE` window with mini-bar and opacity; target-window tracking. `MainWindow.axaml.cs`. |
+| Dasher-Windows | Implemented | `SendInput` with `KEYEVENTF_UNICODE` (VK_BACK for deletes — one per code point, output-callback driven since Aug 2026); canvas-only topmost `WS_EX_NOACTIVATE` window with mini-bar and opacity; target-window tracking. `MainWindow.axaml.cs`. |
 | Dasher-Apple (macOS) | Implemented | Accessibility-trusted CGEvent posting to the tracked frontmost app; floating non-activating window, "Sending to \<app\>" indicator. `DirectModeService.swift`, `MacContentView.swift`. |
 | Dasher-Apple (iOS) | Different mechanism | Keyboard extension (`UITextDocumentProxy.insertText/deleteBackward`) — the OS-sanctioned form of direct entry. Onboarding covered by [RFC 0008](./0008-keyboard-onboarding.md). |
 | Dasher-GTK | Partial | `ydotool` injection works; daemon probing + failure surfacing + UTF-8-safe deletes landed in [Dasher-GTK #51](https://github.com/dasher-project/Dasher-GTK/pull/51). **Missing:** keep-above / no-focus window behaviour (GTK4 removed the APIs v5 used — see Detailed design) and per-character rather than whole-string injection on some paths. |
@@ -212,5 +212,5 @@ Per [RFC 0011](./0011-testing.md). Mixed automated + manual:
 
 ## History
 
-- _2026-08-21_ — _(initial proposal, growing out of the v6 first-impressions
-  report and Dasher-GTK #51)_
+- _2026-08-21_ — _(initial proposal, growing out of the v6 first-impressions report and Dasher-GTK #51)_
+- _2026-08-24_ — _(Windows: deletions now forwarded from engine output events (one backspace per code point, event-2 clears resync without injecting), closing the gap reported in [Dasher-Windows #26](https://github.com/dasher-project/Dasher-Windows/issues/26))_

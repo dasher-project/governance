@@ -111,7 +111,7 @@ Arabic or Hindi cannot navigate the settings UI in their language.
 
 ## Detailed design
 
-### Principle: two layers, one locale
+### Principle: two layers, one locale, one catalogue
 
 The user selects one language. Both layers localise from that single choice:
 
@@ -124,6 +124,20 @@ The user selects one language. Both layers localise from that single choice:
 │  (parameter labels, descriptions, enums)    │     (JSON runtime)
 └─────────────────────────────────────────────┘
 ```
+
+**Amended (2026-08-27):** the frontend layer is further split into a
+**shared UI catalogue** (in this repository under `strings/`) and the
+platform-native translation files generated from it. Frontend chrome
+strings — toolbar labels, settings section names, dialog text — are
+conceptually the same across platforms ("Speed", "Settings", "Privacy",
+"Copy"), so translating them four times is waste. The catalogue defines
+canonical English keys; a generation script in each frontend maps them
+to `.po` msgids, Android `string name=` keys, Apple `xcstrings` keys, or
+Windows `.resx` names. Platform-specific strings (onboarding copy unique
+to iOS, GTK ydotool setup text) live in the catalogue with a
+`platforms` annotation and are skipped by other frontends' generators.
+Frontends vendor the catalogue as a git submodule or copy it at build
+time; either way, one translator contribution propagates everywhere.
 
 The frontend calls `dasher_set_locale(ctx, code)` **and** switches its own
 native resource bundle to the same locale simultaneously.
@@ -443,3 +457,7 @@ gracefully.
   language), and the alphabet is the independent writing-language control.
   Resolved Q3. Reflects the Dasher-Apple implementation, which removed its
   in-app picker and ships a 32-locale chrome catalog that follows the OS.
+- 2026-08-27 — amended: shared UI string catalogue added under `strings/`
+  (see Principle above). Dasher-GTK and Dasher-Android now ship all 33
+  DasherCore locales (machine-translated via batch pass, French
+  hand-reviewed). Frontend generators consume the catalogue.

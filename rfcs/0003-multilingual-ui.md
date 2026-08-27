@@ -126,7 +126,7 @@ The user selects one language. Both layers localise from that single choice:
 ```
 
 **Amended (2026-08-27):** the frontend layer is further split into a
-**shared UI catalogue** (in this repository under `strings/`) and the
+**shared UI catalogue** (in [dasher-shared-resources](https://github.com/dasher-project/dasher-shared-resources) (consumed as a git submodule)) and the
 platform-native translation files generated from it. Frontend chrome
 strings — toolbar labels, settings section names, dialog text — are
 conceptually the same across platforms ("Speed", "Settings", "Privacy",

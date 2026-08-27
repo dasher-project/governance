@@ -4,7 +4,7 @@ title: Direct-entry mode (typing into other applications)
 status: proposed
 platforms: [apple, windows, gtk, android, core]
 created: 2026-08-21
-updated: 2026-08-21
+updated: 2026-08-26
 ---
 
 # Direct-entry mode (typing into other applications)
@@ -30,7 +30,7 @@ Audited August 2026.
 | Dasher-Windows | Implemented | `SendInput` with `KEYEVENTF_UNICODE` (VK_BACK for deletes — one per code point, output-callback driven since Aug 2026); canvas-only topmost `WS_EX_NOACTIVATE` window with mini-bar and opacity; target-window tracking. `MainWindow.axaml.cs`. |
 | Dasher-Apple (macOS) | Implemented | Accessibility-trusted CGEvent posting to the tracked frontmost app; floating non-activating window, "Sending to \<app\>" indicator. `DirectModeService.swift`, `MacContentView.swift`. |
 | Dasher-Apple (iOS) | Different mechanism | Keyboard extension (`UITextDocumentProxy.insertText/deleteBackward`) — the OS-sanctioned form of direct entry. Onboarding covered by [RFC 0008](./0008-keyboard-onboarding.md). |
-| Dasher-GTK | Partial | `ydotool` injection works; daemon probing + failure surfacing + UTF-8-safe deletes landed in [Dasher-GTK #51](https://github.com/dasher-project/Dasher-GTK/pull/51). **Missing:** keep-above / no-focus window behaviour (GTK4 removed the APIs v5 used — see Detailed design) and per-character rather than whole-string injection on some paths. |
+| Dasher-GTK | Implemented (X11) | `ydotool` injection with daemon probing + failure surfacing + UTF-8-safe deletes ([Dasher-GTK #51](https://github.com/dasher-project/Dasher-GTK/pull/51)); X11 window behaviour via `_NET_WM_WINDOW_TYPE_DOCK` (never focused by EWMH WMs, stays above, all desktops — v5's three GTK4-removed calls in one property, [#62](https://github.com/dasher-project/Dasher-GTK/pull/62)); opacity slider (Preferences → Output, persisted); editor + both bars hide with a floating mini-bar; layout menu (Right/Left/Bottom/Top/Keyboard). **Wayland:** no-focus/keep-above unavailable to regular apps — the mode works but the user must steer without clicking (see Detailed design, GTK section). |
 | Dasher-Android | N/A (IME) | Standalone apps cannot inject input on Android; the IME service *is* direct entry there. |
 | dasher-web | N/A | Browsers cannot inject input across applications. |
 | DasherCore | N/A | Injection is entirely frontend-side; the engine only needs the output callback (`dasher_set_output_callback`, event types 0 insert / 1 delete). |
@@ -124,16 +124,20 @@ fails loudly everywhere.
   (fallback `cghidEventTap`); backspace keycode 51, Return 36; floating,
   non-activating, all-spaces window; accessibility-gate prompt.
 - **GTK.** Injection via `ydotool` (`type` for strings, `key` for
-  Backspace/Return/Tab), daemon-probed as above. **Open problem:** GTK4
-  removed `gtk_window_set_keep_above`, `set_accept_focus` and `stick` — v5's
-  exact recipe is unavailable. Candidate approaches, to be settled in
-  discussion: (a) X11-only fallback via raw Xlib (`XSetInputFocus` /
-  `_NET_WM_STATE_ABOVE`) when not running under Wayland; (b) accept focus
-  stealing on Wayland and document that the user should start Dasher by
-  hover/click-free input (e.g. socket/eye-tracker drivers that don't require
-  clicking the canvas); (c) pursue a compositor-specific route (KDE
-  layer-shell) as an opt-in. Until then, GTK's mode works but is ergonomically
-  worse than v5 on X11.
+  Backspace/Return/Tab), daemon-probed as above. Window behaviour is
+  **resolved on X11** (shipped in [Dasher-GTK #62](https://github.com/dasher-project/Dasher-GTK/pull/62)):
+  setting the window's EWMH type to `_NET_WM_WINDOW_TYPE_DOCK` makes
+  EWMH-compliant window managers never give it keyboard focus, keep it above,
+  and show it on all desktops — v5's three GTK4-removed calls in one property
+  (a plain `WM_HINTS.input` toggle was tried first but GTK4 rewrites WM_HINTS
+  whenever it manages focus, so it does not survive; the type hint does).
+  Opacity follows via `_NET_WM_WINDOW_OPACITY` (0.2–1.0, persisted, live
+  slider — Windows/Apple parity). **Wayland remains the open case:** regular
+  apps cannot refuse focus or stay above (only layer-shell surfaces can, and
+  that is compositor-specific). On Wayland the mode works but the user must
+  steer without clicking the canvas (hover/gaze drivers). The pragmatic
+  guidance until compositor support exists: X11 sessions get full parity,
+  Wayland users are warned in the mode's setup copy.
 - **Android / visionOS / web.** No standalone direct entry; Android's IME is
   the equivalent surface (onboarding: RFC 0008).
 
@@ -213,4 +217,5 @@ Per [RFC 0011](./0011-testing.md). Mixed automated + manual:
 ## History
 
 - _2026-08-21_ — _(initial proposal, growing out of the v6 first-impressions report and Dasher-GTK #51)_
+- _2026-08-26_ — _GTK status updated to Implemented (X11) after [Dasher-GTK #62](https://github.com/dasher-project/Dasher-GTK/pull/62) shipped the dock-type window behaviour + opacity; Wayland remains the open case_
 - _2026-08-24_ — _(Windows: deletions now forwarded from engine output events (one backspace per code point, event-2 clears resync without injecting), closing the gap reported in [Dasher-Windows #26](https://github.com/dasher-project/Dasher-Windows/issues/26))_

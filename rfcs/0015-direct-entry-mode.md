@@ -4,7 +4,7 @@ title: Direct-entry mode (typing into other applications)
 status: proposed
 platforms: [apple, windows, gtk, android, core]
 created: 2026-08-21
-updated: 2026-08-26
+updated: 2026-09-01
 ---
 
 # Direct-entry mode (typing into other applications)
@@ -109,10 +109,64 @@ fails loudly everywhere.
    platform's keycode space uses the platform's unicode path
    (`KEYEVENTF_UNICODE`, CGEvent unicode string, `ydotool type`).
 
-7. **Engine interface.** No engine changes are required. Frontends consume
+7. **Engine interface.** Injection needs no engine changes. Frontends consume
    `dasher_set_output_callback` events; the engine's edit buffer keeps
    accumulating regardless (it is simply not displayed), so leaving the mode
    must not corrupt engine state.
+
+8. **Context awareness** *(added 2026-09, see "Context awareness" below)*.
+   Direct entry is a *conversation with the target field*, not a blank slate:
+   - predictions continue from text already in the target field where the
+     platform can read it (v5 could not do this on Windows),
+   - switching target fields re-anchors the model rather than resetting to an
+     empty context,
+   - and editing actions (copy/paste/select-all) operate on the *target's*
+     selection, not Dasher's internal buffer.
+
+### Context awareness (target-field context)
+
+**How v5 did it (researched, legacy `Src/Win32`)**: v5 never read the target
+app's text. All Dasher output was inserted into an internal EDIT control (the
+"shadow buffer") first, `SendInput`'d to the target second; the LM read its
+context from that buffer (`GetContext` = `GetWindowText(edit)`). Clicking
+re-anchored via `SetOffset(cursor)`; control-mode Copy/Paste/Cut/SelectAll
+were `WM_COPY`/`WM_PASTE`/`EM_SETSEL` against the same buffer; a WinEvent
+hook reset the buffer on target focus change (opt-in). So v5's "knows the
+context" was *session* context: everything typed through Dasher into the
+current target.
+
+**The v6 upgrade** exceeds this in three tiers:
+
+| Tier | Behaviour | Mechanism |
+| --- | --- | --- |
+| 1. Session context (v5 parity) | Predictions continue from everything typed through Dasher in this session | The engine's edit buffer already mirrors injected output (Dasher-Windows #45 verified byte parity). Frontend calls `dasher_set_offset` to re-anchor after external caret moves it knows about. |
+| 2. Field context | Switching target fields **re-reads** the new field and re-seeds, instead of v5's reset-to-empty | New CAPI `dasher_seed_buffer(ctx, text, caret)` replaces the buffer and rebuilds the model anchored at the caret. Frontend reads the target via the platform's accessibility text API (Windows: UI Automation `TextPattern`, fallback `WM_GETTEXT` for legacy EDIT controls; macOS: `AXUIElement` kAXFocusedUIElementParameterizedAttribute; GTK: `AtkText`/`atspi`). |
+| 3. Pre-existing context | Predictions continue from text the user *didn't* type through Dasher — mid-sentence continuation, replying above quoted text | Same `dasher_seed_buffer` at mode entry / focus change with the field's current text. |
+
+**Failure modes**: accessibility reads can be slow (read on a background
+thread; timeout ~200 ms), unsupported in some apps (browsers' canvas editors,
+games), or blocked (elevated target processes from a non-elevated Dasher).
+Degrade gracefully: no read → Tier 1 session context; read failed for a new
+target → seed empty (v5 behaviour), never a dead mode.
+
+**Engine-side contract** (`dasher.h`):
+
+- `dasher_set_offset(ctx, offset)` — re-anchor the model at a buffer
+  position; the LM context becomes the buffer text before the offset.
+- `dasher_seed_buffer(ctx, text, caret_offset)` — replace the buffer,
+  emit event 2 (buffer cleared) first so output subscribers resync **without
+  injecting** (backspacing a full field into the document would destroy the
+  user's text — the same reasoning as Dasher-Windows #45), then rebuild the
+  model anchored at `caret_offset`. Rate stats reset.
+
+**Editing actions** (clipboard bridge): Copy lives in control mode — a
+control node whose action invokes the existing `dasher_set_clipboard_callback`
+(the engine already has `SupportsClipboard()` plumbing from v5). Paste /
+Cut / Select-All must be **frontend** actions (they act on the target's
+selection, which the engine cannot touch): injected as Ctrl+V/X/A (or the
+platform equivalent) aimed at the tracked target window, surfaced on the
+mini-bar. This mirrors v5, which implemented them in the frontend for exactly
+this reason.
 
 ### Platform specifics
 
@@ -219,3 +273,4 @@ Per [RFC 0011](./0011-testing.md). Mixed automated + manual:
 - _2026-08-21_ — _(initial proposal, growing out of the v6 first-impressions report and Dasher-GTK #51)_
 - _2026-08-26_ — _GTK status updated to Implemented (X11) after [Dasher-GTK #62](https://github.com/dasher-project/Dasher-GTK/pull/62) shipped the dock-type window behaviour + opacity; Wayland remains the open case_
 - _2026-08-24_ — _(Windows: deletions now forwarded from engine output events (one backspace per code point, event-2 clears resync without injecting), closing the gap reported in [Dasher-Windows #26](https://github.com/dasher-project/Dasher-Windows/issues/26))_
+- _2026-09-01_ — _Context-awareness amendment (contract clause 8 + "Context awareness" section): tiered session/field/pre-existing context via new `dasher_set_offset` + `dasher_seed_buffer` CAPI, clipboard bridge for control mode and mini-bar. Grows out of the v5-context research in [Dasher-Windows #50](https://github.com/dasher-project/Dasher-Windows/issues/50)._

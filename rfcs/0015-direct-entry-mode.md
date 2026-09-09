@@ -4,7 +4,7 @@ title: Direct-entry mode (typing into other applications)
 status: proposed
 platforms: [apple, windows, gtk, android, core]
 created: 2026-08-21
-updated: 2026-09-01
+updated: 2026-09-08
 ---
 
 # Direct-entry mode (typing into other applications)
@@ -140,7 +140,7 @@ current target.
 | Tier | Behaviour | Mechanism |
 | --- | --- | --- |
 | 1. Session context (v5 parity) | Predictions continue from everything typed through Dasher in this session | The engine's edit buffer already mirrors injected output (Dasher-Windows #45 verified byte parity). Frontend calls `dasher_set_offset` to re-anchor after external caret moves it knows about. |
-| 2. Field context | Switching target fields **re-reads** the new field and re-seeds, instead of v5's reset-to-empty | New CAPI `dasher_seed_buffer(ctx, text, caret)` replaces the buffer and rebuilds the model anchored at the caret. Frontend reads the target via the platform's accessibility text API (Windows: UI Automation `TextPattern`, fallback `WM_GETTEXT` for legacy EDIT controls; macOS: `AXUIElement` kAXFocusedUIElementParameterizedAttribute; GTK: `AtkText`/`atspi`). |
+| 2. Field context | Switching target fields **re-reads** the new field and re-seeds, instead of v5's reset-to-empty; a caret move **within an already-focused field** re-seeds too *(amended 2026-09, RFC 0019)* | New CAPI `dasher_seed_buffer(ctx, text, caret)` replaces the buffer and rebuilds the model anchored at the caret. Frontend reads the target via the platform's accessibility text API (Windows: UI Automation `TextPattern`, fallback `WM_GETTEXT` for legacy EDIT controls; macOS: `AXUIElement` kAXFocusedUIElementParameterizedAttribute; GTK: `AtkText`/`atspi`). Triggers: focus/foreground change, plus the platform's caret-moved/selection-changed event (Windows UIA `TextSelectionChanged`, AtkText `caret-moved`, `NSAccessibilitySelectedTextChanged`) — stale events are dropped at seed time (the tracked target must still be foreground). |
 | 3. Pre-existing context | Predictions continue from text the user *didn't* type through Dasher — mid-sentence continuation, replying above quoted text | Same `dasher_seed_buffer` at mode entry / focus change with the field's current text. |
 
 **Failure modes**: accessibility reads can be slow (read on a background
@@ -274,3 +274,4 @@ Per [RFC 0011](./0011-testing.md). Mixed automated + manual:
 - _2026-08-26_ — _GTK status updated to Implemented (X11) after [Dasher-GTK #62](https://github.com/dasher-project/Dasher-GTK/pull/62) shipped the dock-type window behaviour + opacity; Wayland remains the open case_
 - _2026-08-24_ — _(Windows: deletions now forwarded from engine output events (one backspace per code point, event-2 clears resync without injecting), closing the gap reported in [Dasher-Windows #26](https://github.com/dasher-project/Dasher-Windows/issues/26))_
 - _2026-09-01_ — _Context-awareness amendment (contract clause 8 + "Context awareness" section): tiered session/field/pre-existing context via new `dasher_set_offset` + `dasher_seed_buffer` CAPI, clipboard bridge for control mode and mini-bar. Grows out of the v5-context research in [Dasher-Windows #50](https://github.com/dasher-project/Dasher-Windows/issues/50)._
+- _2026-09-08_ - _Clause 8 trigger amendment (with RFC 0019): caret moves within an already-focused target field are context triggers alongside focus changes; platform caret-moved/selection-changed events listed; stale events dropped at seed time (tracked target must still be foreground)._

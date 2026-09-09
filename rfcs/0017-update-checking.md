@@ -33,7 +33,8 @@ notification with a link. No silent downloads, no self-installation.
 
 ## Implementation status
 
-Not implemented anywhere. Dasher-Windows has a `UpdateChecker` service
+Dasher-GTK ships the check for self-managed builds (`UpdateChecker`, plus the
+Settings → Privacy opt-out); Dasher-Windows has a `UpdateChecker` service
 (GitHub Releases API + in-app dialog) that is the natural starting point for
 the shared behaviour; it is compiled out in `STORE` builds, which matches the
 dual-track split.
@@ -43,7 +44,7 @@ dual-track split.
 | Dasher-Apple (iOS) | TestFlight | None (TestFlight notifies) |
 | Dasher-Apple (macOS) | GitHub Releases | None |
 | Dasher-Windows | GitHub Releases; STORE variant planned | `UpdateChecker` (non-STORE builds only) |
-| Dasher-GTK | GitHub Releases (Flatpak + AppImage artifacts) | None |
+| Dasher-GTK | GitHub Releases (Flatpak + AppImage artifacts) | Implemented — `UpdateChecker` (self-managed builds; Flatpak skips) + "Check for updates" toggle in Preferences → Privacy |
 | Dasher-Android | GitHub Releases APKs; Play Store intended | None |
 | dasher-web | Always "latest" by nature of the browser | N/A |
 
@@ -206,3 +207,7 @@ Per [RFC 0011](./0011-testing.md): manual verification primarily.
 - Decision: Not yet accepted. Dasher-Windows' UpdateChecker is the seed
   implementation; no other frontend has shipped the behaviour.
 - Open sub-questions: all (see Unresolved questions).
+
+## History
+
+- _2026-09-09_ — _Implementation status corrected: Dasher-GTK ships the check for self-managed builds (UpdateChecker + Privacy opt-out), which the initial table missed._

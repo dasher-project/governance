@@ -79,3 +79,4 @@ means "landed on some platforms, not all."
 | [0015](./0015-direct-entry-mode.md) | Direct-entry mode (typing into other applications) | proposed | apple, windows, gtk, android, core |
 | [0016](./0016-version-in-settings.md) | Report the app version in Settings (Privacy tab for now) | active | apple, windows, gtk, android, web |
 | [0017](./0017-update-checking.md) | Update distribution and in-app update checking (dual-track) | proposed | apple, windows, gtk, android, web |
+| [0018](./0018-startup-loading-states.md) | Startup loading states — no frozen or black windows | proposed | apple, windows, gtk, android, web, core |

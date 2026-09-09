@@ -1,0 +1,25 @@
+name: RFC index
+
+# Guard (scripts/check_rfc_index.py): every NNNN-*.md in rfcs/ must have a
+# README index row, every row must resolve, rows ascend. Keeps merged RFCs
+# reachable from the index — the gap this caught post-hoc on 0018.
+
+on:
+  pull_request:
+    paths:
+      - 'rfcs/**'
+      - 'scripts/check_rfc_index.py'
+      - '.github/workflows/rfc-index.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'rfcs/**'
+      - 'scripts/check_rfc_index.py'
+
+jobs:
+  index:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check RFC index consistency
+        run: python3 scripts/check_rfc_index.py

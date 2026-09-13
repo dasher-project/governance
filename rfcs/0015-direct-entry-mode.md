@@ -4,7 +4,7 @@ title: Direct-entry mode (typing into other applications)
 status: proposed
 platforms: [apple, windows, gtk, android, core]
 created: 2026-08-21
-updated: 2026-09-08
+updated: 2026-09-13
 ---
 
 # Direct-entry mode (typing into other applications)
@@ -140,8 +140,61 @@ current target.
 | Tier | Behaviour | Mechanism |
 | --- | --- | --- |
 | 1. Session context (v5 parity) | Predictions continue from everything typed through Dasher in this session | The engine's edit buffer already mirrors injected output (Dasher-Windows #45 verified byte parity). Frontend calls `dasher_set_offset` to re-anchor after external caret moves it knows about. |
-| 2. Field context | Switching target fields **re-reads** the new field and re-seeds, instead of v5's reset-to-empty; a caret move **within an already-focused field** re-seeds too *(amended 2026-09, RFC 0019)* | New CAPI `dasher_seed_buffer(ctx, text, caret)` replaces the buffer and rebuilds the model anchored at the caret. Frontend reads the target via the platform's accessibility text API (Windows: UI Automation `TextPattern`, fallback `WM_GETTEXT` for legacy EDIT controls; macOS: `AXUIElement` kAXFocusedUIElementParameterizedAttribute; GTK: `AtkText`/`atspi`). Triggers: focus/foreground change, plus the platform's caret-moved/selection-changed event (Windows UIA `TextSelectionChanged`, AtkText `caret-moved`, `NSAccessibilitySelectedTextChanged`) — stale events are dropped at seed time (the tracked target must still be foreground). |
-| 3. Pre-existing context | Predictions continue from text the user *didn't* type through Dasher — mid-sentence continuation, replying above quoted text | Same `dasher_seed_buffer` at mode entry / focus change with the field's current text. |
+| 2. Field context *(amended 2026-09-13, sentence-window)* | Switching target fields **re-reads** the new field and re-seeds; a caret move **within an already-focused field** re-seeds too | **Sentence-window seeding**: read the field's full text + caret via the platform's accessibility text API, then trim to the **sentence around the caret** (from the last sentence boundary — `.` `!` `?` `\n` `;` `:` — up to ~200 UTF-16 units back, whichever is closer). Seed via `dasher_seed_buffer(ctx, sentence, sentence_length)`. See "Sentence-window seeding" below for the design rationale — full-document seeding caused visible canvas resets in Outlook (Dasher-Windows #68). |
+| 3. Pre-existing context | Predictions continue from text the user *didn't* type through Dasher — mid-sentence continuation, replying above quoted text | Same sentence-window `dasher_seed_buffer` at mode entry / focus change with the sentence around the caret. |
+
+**Sentence-window seeding** *(amended 2026-09-13; supersedes the original
+full-document tier-2/tier-3 mechanism)*
+
+The original amendment seeded the engine with the FULL text of the target
+field. This broke in Outlook (Dasher-Windows #68, user-report video): the
+UIA provider fires `TextSelectionChanged` on every injected character and
+returns **inconsistent full-document reads** (email signatures included or
+omitted, formatting variations, read timing). The shadow-compare — the
+mechanism that prevents re-seeding on echoes of our own injected output —
+could never reliably match, so every keystroke triggered a full model
+rebuild = a visible canvas reset. BlueMail showed the same failure at
+lower severity ("stutters but usable"). v5 never had this problem because
+it never re-read the target within a field.
+
+The sentence-window model (Heide's suggestion, v5-aligned):
+
+1. **Read the sentence, not the document.** The LM only needs local
+   context for prediction — the current sentence (or last ~200 chars) is
+   sufficient. Seeding with a small, stable window makes the
+   shadow-compare reliable: during typing, the sentence and the engine
+   buffer grow in lockstep (each typed character extends both
+   identically), so echoes compare equal and are skipped. A genuine caret
+   click at a different position changes the sentence window → mismatch →
+   re-seed with the new sentence (the re-anchor the user wants).
+
+2. **Symmetric trimming.** Both the target read AND the engine buffer are
+   trimmed through the same sentence-window function before comparing.
+   Without this, typing a sentence terminator (`.`) through Dasher broke
+   the lockstep: the engine grew to include the period while the
+   sentence window trimmed to empty (boundary). Symmetric trimming also
+   handles the CRLF divergence (engine emits `\n`, Outlook inserts
+   `\r\n`) naturally — the boundary lands the same place on both sides.
+
+3. **Manual re-anchor.** A mini-bar button (crosshair icon) forces a
+   fresh read + seed for edge cases where the caret-moved event doesn't
+   fire (some apps' accessibility providers miss same-field clicks) or
+   the user wants certainty about the current context.
+
+4. **Surrogate safety.** The 200-unit lookback cap can land mid-UTF-16-
+   surrogate-pair; both the window start AND end are guarded against
+   splitting a pair (start slides forward past a low surrogate, end steps
+   back from a lone high surrogate).
+
+**Cross-platform note**: all platforms with accessibility-text APIs are
+susceptible to the same full-document read inconsistency — GTK's
+`AtkText`/`atspi` and Apple's `AXUIElement` return the full accessible
+text of complex editors (Mail, Pages, browser-based editors), and the
+same signature/formatting/timing variations apply. Android's IME
+`SurroundingText` API already returns a windowed subset rather than the
+full text, confirming this as the correct approach. **All frontends
+implementing clause 8 (or RFC 0019 clause 6) should use sentence-window
+seeding, not full-document seeding.**
 
 **Failure modes**: accessibility reads can be slow (read on a background
 thread; timeout ~200 ms), unsupported in some apps (browsers' canvas editors,
@@ -275,3 +328,4 @@ Per [RFC 0011](./0011-testing.md). Mixed automated + manual:
 - _2026-08-24_ — _(Windows: deletions now forwarded from engine output events (one backspace per code point, event-2 clears resync without injecting), closing the gap reported in [Dasher-Windows #26](https://github.com/dasher-project/Dasher-Windows/issues/26))_
 - _2026-09-01_ — _Context-awareness amendment (contract clause 8 + "Context awareness" section): tiered session/field/pre-existing context via new `dasher_set_offset` + `dasher_seed_buffer` CAPI, clipboard bridge for control mode and mini-bar. Grows out of the v5-context research in [Dasher-Windows #50](https://github.com/dasher-project/Dasher-Windows/issues/50)._
 - _2026-09-08_ - _Clause 8 trigger amendment (with RFC 0019): caret moves within an already-focused target field are context triggers alongside focus changes; platform caret-moved/selection-changed events listed; stale events dropped at seed time (tracked target must still be foreground)._
+- _2026-09-13_ - _Sentence-window amendment: tier-2/tier-3 context seeding now trims to the sentence around the caret (~200 UTF-16 units, symmetric trimming for the shadow-compare) instead of seeding the full document. Full-document reads from Outlook's UIA provider returned inconsistent results (signatures, formatting, timing) — the shadow-compare could never match and every keystroke triggered a visible canvas reset. Manual re-anchor button recommended on the mini-bar. All platforms should adopt sentence-window seeding (Dasher-Windows #68)._

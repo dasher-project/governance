@@ -253,7 +253,8 @@ all four platforms adopt the same shape.
 | Dwell click | GTK | `test_dwell_click_handler.cpp` | hover triggers click |
 | Dwell click | Windows | — | hover triggers click |
 | Eye-gaze | Windows | — | ⚠️ tracker-specific; least tested |
-| Joystick | GTK | `JoystickInputTest` (Android) | gamepad steering |
+| Joystick | GTK | — (manual only) | gamepad steering |
+| Joystick | Android | `JoystickInputTest` | gamepad steering |
 | Tilt | Apple | — | tilt input |
 
 ## Unresolved questions (the most important section)

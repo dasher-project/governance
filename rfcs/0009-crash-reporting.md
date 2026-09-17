@@ -213,6 +213,17 @@ Per [RFC 0011](./0011-testing.md). Defence-in-depth claims should name a test:
 - **End-to-end** — manual: trigger a crash (debug hook or `kill -ABRT`), relaunch,
   confirm a `$exception` lands in PostHog Error Tracking. Verified on macOS.
 
+## Test matrix
+
+| Aspect | Platform | Automated | Manual |
+|---|---|---|---|
+| Crash captured | Android | — | force crash, verify PostHog |
+| Crash captured | Windows | — | force crash, verify PostHog |
+| Crash captured | GTK | `test_crash_file_roundtrip.cpp` | — |
+| Engine log tail | all | `test_engine_log_ring_buffer.cpp` | verify in PostHog |
+| Stack readable | Android | — | ⚠️ #44 (no obfuscation — verify manually) |
+| Stack readable | Windows | — | ⚠️ #60 (deferred crash loses stack) |
+
 ## Unresolved questions
 
 1. **Android IME process boundary** — should the IME also write a crash file, or

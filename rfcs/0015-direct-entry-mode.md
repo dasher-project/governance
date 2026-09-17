@@ -297,6 +297,20 @@ Per [RFC 0011](./0011-testing.md). Mixed automated + manual:
   confirm a visible error and clean exit from the mode. Record the pass in the
   PR that changes this behaviour.
 
+## Test matrix
+
+| Clause | Platform | Automated test | Manual scenario |
+|---|---|---|---|
+| 1: keyboard mode toggles | GTK | — | toggle Layout → Keyboard |
+| 2: text injection | GTK | `DirectModeService` (worker thread) | type into notes app |
+| 2: text injection | Android | — (IME path) | type into any app |
+| 4: deletions forwarded | GTK/Windows | engine tests (output events) | backspace in direct mode |
+| 6: caret triggers | Windows | — (manual only) | click in Outlook/Notepad |
+| 6: caret triggers | GTK | `TargetContextWatcher` atspi (26 cases) | click in target (needs a11y session) |
+| 7: clipboard bridge | GTK/Windows | — | Sel/Copy/Paste from mini-bar |
+| 8: context awareness (tier 1-3) | Windows | — (manual only) | switch fields in Outlook |
+| 8: sentence-window trimming | all | `TargetContextDecision` unit tests | — |
+
 ## Unresolved questions
 
 1. **GTK4/Wayland focus behaviour.** **Open.** X11 Xlib fallback vs

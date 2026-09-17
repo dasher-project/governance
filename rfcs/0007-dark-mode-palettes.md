@@ -354,6 +354,15 @@ companion lookup covers legacy palettes in the meantime.
 - The existing `parentName` inheritance in `CColorIO` / `ColorPalette`
   is itself prior art for the override-only authoring model.
 
+## Test matrix
+
+| Aspect | Platform | Automated | Manual |
+|---|---|---|---|
+| Dark palette applied | GTK | `test_palettes.cpp` | switch to dark |
+| Light palette applied | all | engine palette tests | switch to light |
+| System mode follows OS | all | — | toggle OS dark mode |
+| Live palette switch | all | — | switch without restart |
+
 ## Unresolved questions
 
 1. **Naming convention** for dark variants. **Resolved (2026-08-01).** Standardise

@@ -176,6 +176,29 @@ Legend: ✅ previously verified · ⚠️ known gap or platform-specific issue �
 
 ---
 
+## Control-node actions (engine ControlManager)
+
+*The engine's control mode provides speak/copy with full granularity (all/page/paragraph/sentence/line/word). Test that frontends expose it.*
+
+- [ ] Control node: Copy what=all — entire buffer to clipboard
+- [ ] Control node: Copy what=sentence — current sentence to clipboard
+- [ ] Control node: Speak what=all — TTS reads entire buffer
+- [ ] Control node: Speak what=word — TTS reads last word
+- [ ] Control node: Stop — halts current TTS
+- [ ] Control node: Pause — pauses the engine
+
+## Input filter modes (engine)
+
+*All filters exist in DasherCore; test that frontends expose them and they behave correctly.*
+
+- [ ] One-dimensional mode: single-axis steering works (head-tracker style)
+- [ ] Compass mode: N/S/E/W button navigation selects
+- [ ] Stylus mode: pen/stylus input works
+- [ ] Stop-outside: zooming stops when pointer leaves the canvas
+- [ ] Slow start: speed ramps up gradually at session start
+- [ ] Circle start: dwell in the start circle to begin zooming
+- [ ] Auto-copy on stop: buffer copied to clipboard when session pauses/stops
+
 ## Known gaps
 
 Prioritised for RFC drafting. **Windows is the primary platform** for access
@@ -202,6 +225,17 @@ methods (eye-gaze is impractical on mobile).
   Android and GTK both do
 - **Android IME crash reporting** — the IME process may be unguarded (RFC 0009
   open question #1)
+
+### Verified present in v6 DasherCore (was incorrectly listed as gaps)
+All of these exist in the engine — the gap is frontend exposure and testing,
+not missing functionality:
+- Speak/copy control actions with full granularity (all/page/paragraph/
+  sentence/line/word) — `ControlManager.cpp`
+- Socket input → replaced by `dasher_mouse_move(ctx, x, y)` CAPI
+- OneDimensionalFilter, CompassMode, StylusFilter, TwoPushDynamicFilter,
+  AlternatingDirectMode — all in `src/DasherCore/`
+- Stop-outside (`BP_STOP_OUTSIDE`), Slow start (`BP_SLOW_START`), Circle
+  start (`LP_CIRCLE_PERCENT`), Auto-copy on stop (`BP_COPY_ALL_ON_STOP`)
 
 ### Explicitly deprioritised
 - Screen reader compatibility of Dasher's own UI — not a priority

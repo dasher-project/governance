@@ -183,6 +183,16 @@ Per [RFC 0011](./0011-testing.md): manual verification, recorded per release.
   development (emulator, API 35) and the steps are in the v0.1.13 PR
   (dasher-project/Dasher-Android#30).
 
+## Test matrix
+
+| Aspect | Platform | Automated | Manual |
+|---|---|---|---|
+| Loading state on first launch | Android | — (v0.1.13 shipped) | fresh install, observe |
+| Loading state on first launch | GTK | — | fresh install, observe |
+| No black window | all | — | cold start, verify |
+| No flash on warm start | all | — | subsequent launch, verify |
+| Error row on failure | all | — | corrupt data dir, verify |
+
 ## Unresolved questions
 
 1. **Progress phases.** Should DasherCore grow an optional progress callback

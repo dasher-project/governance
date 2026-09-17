@@ -243,6 +243,19 @@ all four platforms adopt the same shape.
 - **Tobii / eyeX / PCEye** hardware ecosystems established the UDP-gaze
   de-facto pattern.
 
+## Test matrix
+
+| Method | Platform | Automated | Manual scenario |
+|---|---|---|---|
+| Mouse/touch steering | all | `test_interaction.cpp` (engine) | drive the canvas |
+| One-switch | GTK/Windows | — | switch press advances/selects |
+| Two-switch | GTK/Windows | — | two-switch advance/select |
+| Dwell click | GTK | `test_dwell_click_handler.cpp` | hover triggers click |
+| Dwell click | Windows | — | hover triggers click |
+| Eye-gaze | Windows | — | ⚠️ tracker-specific; least tested |
+| Joystick | GTK | `JoystickInputTest` (Android) | gamepad steering |
+| Tilt | Apple | — | tilt input |
+
 ## Unresolved questions (the most important section)
 
 1. **Canonical method enums.** ~~Can Apple and Windows agree on a single shared

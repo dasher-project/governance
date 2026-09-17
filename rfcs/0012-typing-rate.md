@@ -145,6 +145,14 @@ Per [RFC 0011](./0011-testing.md):
   plausible and updates live; confirm the game-mode display and the
   `BP_SHOW_TYPING_RATE` toggle (off-by-default, badge appears when on).
 
+## Test matrix
+
+| Aspect | Platform | Automated | Manual |
+|---|---|---|---|
+| CPS/WPM displayed | GTK | `test_engine_contract` (frame path) | type and observe |
+| CPS+WPM both shown | Windows | — | observe readout |
+| Rate resets | all | — | press reset button |
+
 ## Unresolved questions
 
 1. **Window length / pause threshold** — 5 s / 2 s proposed. **Resolved

@@ -595,6 +595,16 @@ because it allows v6 to evolve its storage independently.
   other and offer to import bookmarks/history on first launch — a very
   similar UX pattern.
 
+## Test matrix
+
+| Aspect | Platform | Automated | Manual |
+|---|---|---|---|
+| Settings migration | Windows | `V5MigrationService` tests | install v5, upgrade, verify |
+| Settings migration | Apple | — | install v5, upgrade |
+| Training migration | Windows | `V5MigrationService` tests | v5 training data preserved |
+| Training migration | Android | `LegacyTrainingMigrationTest` (7 cases) | — |
+| Training migration | GTK | — (no v5 path) | n/a |
+
 ## Unresolved questions
 
 1. **Where does v6 store user data on Windows?** **Resolved (2026-08-01).**

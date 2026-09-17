@@ -177,6 +177,21 @@ Per [RFC 0011](./0011-testing.md):
   New resets to root predictions; direct-entry caret moves re-seed; IME
   composition (CJK); regression pass over RFC 0015 focus-switch seeding.
 
+## Test matrix
+
+| Clause | Platform | Automated test | Manual scenario |
+|---|---|---|---|
+| 1: editable pane | all | — | [checklist#editor](../tests/checklist.md#editor--output-pane-rfc-0019) |
+| 2: edits sync to engine | GTK | `engine_contract_tests: editor_contract_*` | [checklist#editor](../tests/checklist.md#editor--output-pane-rfc-0019) |
+| 2: edits sync to engine | Android | `EditorSyncTest` (7 cases) | [checklist#editor](../tests/checklist.md#editor--output-pane-rfc-0019) |
+| 2: edits sync to engine | Windows | `EngineCApiTests.editor_contract_*` | [checklist#editor](../tests/checklist.md#editor--output-pane-rfc-0019) |
+| 3: caret re-anchors | GTK | `engine_contract_tests: set_offset re-anchors` | click mid-word |
+| 3: caret re-anchors | Android | `EditorSyncTest.pure_caret_move_in_sync_reanchors` | tap mid-word |
+| 4: no loop / caret preserved | GTK | `MainWindow` loop-guard (manual verify) | type + verify no flicker |
+| 5: New = full reset | all | `engine_contract_tests: reset clears` | press New, verify restart |
+| 6: caret triggers (clause 8 of 0015) | GTK | `test_target_context_watcher.cpp` (55 cases) | click in target app |
+| 7: long-doc cap | all | — (deferred, see #57 Windows) | open 2MB file |
+
 ## Unresolved questions
 
 1. **Open.** Long-document cap: seed trailing N chars — what N? (Proposal:

@@ -81,3 +81,4 @@ means "landed on some platforms, not all."
 | [0017](./0017-update-checking.md) | Update distribution and in-app update checking (dual-track) | proposed | apple, windows, gtk, android, web |
 | [0018](./0018-startup-loading-states.md) | Startup loading states — no frozen or black windows | proposed | apple, windows, gtk, android, web, core |
 | [0019](./0019-editor-contract.md) | The editor contract — v5-parity editing for the output pane | proposed | apple, windows, gtk, android, core |
+| [0020](./0020-emoji-in-tree.md) | Emoji in the tree — a settings-gated emoji group for every alphabet | proposed | android, gtk, windows, apple, web, core |

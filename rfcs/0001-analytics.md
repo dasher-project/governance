@@ -4,7 +4,7 @@ title: Privacy-preserving analytics and crash reporting
 status: implemented
 platforms: [apple, windows, gtk, android]
 created: 2026-06-17
-updated: 2026-08-20
+updated: 2026-10-28
 ---
 
 # Privacy-preserving analytics and crash reporting
@@ -64,6 +64,57 @@ The self-hosted PostHog instance and the open event schema are the agreed
 direction. `input_method_changed` is now emitted by Dasher-Windows and
 Dasher-Android (confirmed in live data, August 2026); Apple and GTK still
 do not emit it.
+
+### 2026-10-28 Amendment: UI-interaction telemetry (`ui_action`, `setting_changed`)
+
+**Requesting team:** UX. **Question to answer:** *which settings are the
+priority to improve, and where should main-UI focus go?* That requires
+knowing which controls people actually use: aggregate frequency of main-UI
+button activations, and of settings changes (which parameters, from which
+surface, to which values).
+
+Two events are added to the published schema. Both fire only after the
+existing opt-in; both inherit every guarantee of this RFC.
+
+**`ui_action`** — the user activated a control in the main UI (anything
+outside the settings windows):
+
+| Property | Type | Notes |
+| --- | --- | --- |
+| `surface` | enum | `main_toolbar`, `status_bar`, `ime_toolbar`, `ime_topbar` |
+| `action` | string | Fixed vocabulary per frontend (`new`, `open`, `save`, `pause_play`, `game_mode`, `settings`, `copy`, `share`, `emoji_toggle`, `speed_up`, `speed_down`, `layout`, `float`, `dock`, `hide`, …) — new identifiers require a schema update |
+| `state` | enum, optional | For toggles: `on`/`off`, `paused`/`playing`, `text`/`emoji` |
+
+**`setting_changed`** — the user committed a settings change:
+
+| Property | Type | Notes |
+| --- | --- | --- |
+| `setting_id` | string | The canonical setting identifier (the DasherCore parameter name, or the frontend's setting key, e.g. `Max Bitrate`, `output_font_size`) |
+| `value_type` | enum | `bool`, `number`, `enum`, `string` |
+| `value` | bool/number/string | **Present only for `bool`, `number`, and `enum`** values from a fixed vocabulary. OMITTED for `string` settings — free text (user file paths, custom names) is never collected |
+| `surface` | enum | Where the change was made: `settings`, `main_ui`, `ime` — a speed change from the status bar vs. the settings window answers different UX questions |
+
+**Privacy rules (additions to "explicitly NOT collected"):**
+
+- Setting **values for free-text/string settings** — only the fact that the
+  setting changed (`value_type: "string"`, no `value`).
+- File paths of any kind (the PII scrubbers already strip these from crash
+  traces; UI telemetry must not introduce them).
+
+Programmatic changes (engine init, defaults applied on startup, palette
+derivation) are NOT user actions and must not emit `setting_changed` —
+instrumentation belongs at the widget/control commit site, not inside the
+engine bridge. Derived frontend counters (e.g. `ime_always_docked_changed`)
+that predate this amendment remain valid; new instrumentation uses
+`setting_changed`.
+
+**Implementation status of this amendment:**
+
+| Platform | State |
+| --- | --- |
+| Dasher-Android | Implemented (main toolbar, status-bar speed, IME toolbars; every Settings commit through the parameter rows and the app-level settings) |
+| Dasher-GTK | Implemented (header-bar buttons; every Synced* settings widget) |
+| Dasher-Apple, Dasher-Windows, dasher-web | Not started |
 
 ## Motivation
 
@@ -145,6 +196,9 @@ truth — if it's not in the schema, it's not collected.
 - IP address (scrubbed at ingest)
 - Training text contents
 - Game mode target text
+- Values of free-text/string settings (2026-10-28 amendment: only the fact
+  that such a setting changed is collected)
+- File paths (2026-10-28 amendment)
 
 ### Anonymous identity
 

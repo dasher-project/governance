@@ -4,7 +4,7 @@ title: Typing rate (CPS / WPM) display
 status: implemented
 platforms: [apple, windows, gtk, android, core]
 created: 2026-07-18
-updated: 2026-08-26
+updated: 2026-10-30
 ---
 
 # Typing rate (CPS / WPM) display
@@ -27,8 +27,8 @@ Audited August 2026. The engine layer is done. DasherCore exposes
 | Dasher-Apple (iOS, macOS) | Implemented | Live WPM, max, and average in the canvas overlay and in game mode; a Settings toggle (`showTypingRate`). CPS is not shown; only WPM. |
 | dasher-web | Implemented | Own JS engine; live WPM, peak WPM, and accuracy. Does not consume the DasherCore C API. |
 | Dasher-Windows | Implemented | Status-bar WPM/max/avg (Settings → Output, `ShowTypingRate`); live WPM in the Direct Mode mini-bar (compact form). |
-| Dasher-GTK | Not started | The bundled DasherCore predates `dasher_get_wpm`. |
-| Dasher-Mobile (Android) | Not started | The bundled DasherCore fork predates this feature. |
+| Dasher-GTK | Partial | Settings → Output readout (live CPS/WPM, 2 Hz, #35/#39); the keyboard-mode surface shows nothing (see the direct-entry clause). |
+| Dasher-Mobile (Android) | Implemented | Main-app status-bar readout (live CPS+WPM) and — from the 2026-10-30 amendment — the IME top bar's compact WPM; both opt-in via Settings → Output. |
 
 ## Motivation
 
@@ -99,8 +99,13 @@ Cost: a DasherCore addition + submodule bump.
   when the typing-rate toggle is on. Compact = current rate only (no max/avg)
   — the strip has no room for more, and the audience for this surface
   (therapist/user live feedback) needs the current number. Added August 2026
-  after a Windows user request; the IME surfaces (Android keyboard extension)
-  are exempt for now (no persistent strip; revisit with RFC 0008 flows).
+  after a Windows user request.
+
+  **2026-10-30 amendment:** the Android IME exemption ("no persistent
+  strip; revisit with RFC 0008 flows") is **lifted** — the IME now has a
+  stable top bar (float/dock, emoji, hide), which IS the mode's control
+  strip. Android shows the compact live-WPM there under the same toggle
+  (Settings → Output). GTK's keyboard-mode mini-bar remains an open gap.
 - Format e.g. `4.2 cps · 50 wpm`; labels localised per RFC 0003.
 
 ### Privacy

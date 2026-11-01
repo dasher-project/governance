@@ -110,6 +110,9 @@ subtree, so nothing is lost permanently.
      leaves an ancestor with no action-bearing descendants and no actions of
      its own, the ancestor is skipped too (Select → "⇐" → dead end must not
      render).
+     "Action-bearing descendants" is a graph-reachability FIXPOINT, not a
+     one-level walk — Move/Delete leaves `<ref>` their own direction groups
+     (cycles), so the prune must iterate to a fixed point.
    - **Compound nodes** (the house style mixes actions per node — see
      `CTL_CLEAR`, or `speak`+`move` in the Speak subtree): drop the
      unregistered action element, keep the node if any action remains, skip
@@ -157,8 +160,10 @@ Honesty notes per platform, because the mappings are NOT uniform:
   does not inherently have. v1 implements **char** (caret±1 via the
   `onUpdateSelection` shadow — one offset, no text read) and **all** (via
   `performContextMenuAction(selectAll)`, app-dependent). **Word/paragraph
-  are deferred**: they need word/paragraph bounds, i.e. the same
-  full-text-read class RFC 0015's direct mode deliberately distrusts.
+  are deferred**: word needs a cursor-adjacent read (`getTextBefore/
+  AfterCursor` — the bounded, trusted class) plus boundary logic, and
+  paragraph needs unbounded reads the direct mode deliberately distrusts;
+  both wait for a dedicated Android PR rather than shipping half-measured.
   Android **editor mode** (our own pane) implements the full set from
   measured text, like the Windows editor.
 - **GTK**: XTest keystrokes work under X11; **Wayland has no XTest** (same
@@ -177,11 +182,19 @@ Honesty notes per platform, because the mappings are NOT uniform:
   buffer-based and independent — no coupling.
 - **Copy/Cut**: the toolbar's *Copy selection* / *Cut selection in target
   app* operate on the OS selection — Select is their missing first half.
-- **Dasher-Windows #79 settle window**: the caret events our selection
-  keystrokes provoke land in the existing caret-moved debounce; a selection
-  that does not change text cannot trip a re-seed (the shadow-compare is
-  text-only), and the paragraph-settle guard covers the Enter case. The
-  Windows implementation re-verifies this with the #79 log signatures.
+- **Dasher-Windows #79 interaction (verified, not assumed)**: the
+  shadow-compare is caret-anchored, not text-only — `SentenceWindow.Trim`
+  windows the target read at the caret, so a BACKWARD selection that crosses
+  a sentence boundary (which *Select paragraph backward* does by definition)
+  changes the sentence window and is a genuine `Seed` verdict under the
+  current policy: canvas re-seed mid-selection, the exact #68/#79 disruption
+  class. The Enter-specific settle guard does not cover select chords.
+  **The Windows implementation must extend the own-injection settle-window
+  pattern to selection chords** (timestamp at chord injection, skip
+  `caret moved` seeds inside the window, same log signature), and must add
+  engine-side or test-side confirmation that chained backward selects no
+  longer re-seed. Editor mode is unaffected (selection does not leave the
+  pane).
 - **Move vs Re-anchor**: Move (engine caret) and the mini-bar Re-anchor
   (context re-seed) overlap conceptually; out of scope, noted for a future
   UX pass.
@@ -194,8 +207,12 @@ Honesty notes per platform, because the mappings are NOT uniform:
 - **Read-only fields**: selection is harmless (copy-only) — same as native.
 - **IME composition active**: defer the action until composition ends
   (editor mode's existing `_imeSeedPending` pattern).
-- **Game mode**: control nodes are not reachable in game mode today;
-  nothing to specify.
+- **Game mode**: control-node reachability under game mode is
+  **unverified** (the graft path shows no game-mode condition on inspection,
+  but this RFC asserts nothing). The engine PR must confirm; if control
+  nodes ARE reachable mid-game, a caret/selection change interacts with the
+  game module's target assumptions and needs its own edge-case treatment
+  before the Windows direct-mode mapping ships.
 - **RTL locales** (ar/fa/ur): arrow *direction* flips visually but
   `Ctrl+Shift+←` still selects a word leftward — semantics are unchanged;
   no special casing.
@@ -207,10 +224,11 @@ Honesty notes per platform, because the mappings are NOT uniform:
 A control-tree select emits from **no existing surface** (the `ui_action`
 schema's `surface` enum is main_toolbar/status_bar/ime_toolbar). The
 implementation PR extends the schema additively: new `surface` value
-`control_tree`, new `action` value `select`, and the granularity carried as
-`state: "dist=char,forward=yes"`-style encoding (the schema's existing
-free-text `state` field). Schema amendment at implementation time, per the
-RFC 0001 process.
+`control_tree`, new `action` value `select`, and the granularity carried by EITHER widening the
+enum-typed `state` field (today a closed enum: on/off/right/left/bottom/top)
+with composite values (char_fwd ... all_bwd) OR adding a `dist` property —
+the schema's grain is fixed vocabularies, so this is a real amendment
+decision, made at implementation time per the RFC 0001 process.
 
 ## Drawbacks
 
@@ -292,3 +310,17 @@ RFC 0001 process.
    behind their own PR; until they do, the subtree simply does not appear
    (Android v1 ships char + all + editor-mode full set; GTK may land
    editor-mode-only pending Wayland).
+
+## Resolution
+
+*(filled in when the RFC reaches consensus — see the governance README)*
+
+## History
+
+- 2026-11-01: proposed.
+- 2026-11-01: review-loop revision — precise gating spec, Apple paragraph
+  mapping corrected (Shift+Opt, with the Shift+Cmd document-trap documented),
+  Android v1 scoped to what its APIs honestly support, template sections
+  added; loop-2 fixes — #79 interaction stated truthfully (caret-anchored
+  compare; settle-window must cover select chords), telemetry `state`
+  enum-typing respected, game-mode reachability marked unverified.

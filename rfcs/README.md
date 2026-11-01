@@ -82,3 +82,4 @@ means "landed on some platforms, not all."
 | [0018](./0018-startup-loading-states.md) | Startup loading states — no frozen or black windows | proposed | apple, windows, gtk, android, web, core |
 | [0019](./0019-editor-contract.md) | The editor contract — v5-parity editing for the output pane | proposed | apple, windows, gtk, android, core |
 | [0020](./0020-emoji-in-tree.md) | Emoji in the tree — a settings-gated emoji group for every alphabet | proposed | android, gtk, windows, apple, web, core |
+| [0021](./0021-control-select-subtree.md) | Control-mode Select subtree - native text selection through Dasher | proposed | core, windows, apple, gtk, android |

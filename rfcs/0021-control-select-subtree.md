@@ -1,10 +1,10 @@
 ---
 rfc: 0021
 title: Control-mode Select subtree
-status: proposed          # draft | proposed | active | implemented | rejected | withdrawn
+status: implemented       # draft | proposed | active | implemented | rejected | withdrawn
 platforms: [core, windows, apple, gtk, android, web]   # platforms affected
 created: 2026-11-01
-updated: 2026-11-01
+updated: 2026-11-02
 ---
 
 # Control-mode Select subtree
@@ -22,7 +22,16 @@ registered a handler never see the nodes at all.
 
 ## Implementation status
 
-Not yet implemented.
+| Platform | State | Where |
+| --- | --- | --- |
+| Core | **Landed** — subtree, gating fixpoint (pessimistic liveness + doom seed + orphan rescue), cascade-prune, compound degradation, parse tests | DasherCore #106 (engine v0.2.28+) |
+| Windows | **Landed** — `select` registration, direct-mode chords, editor-mode measured bounds + active-end machine, settle-window extended to select chords, contract tests | Dasher-Windows #81, shipped v0.1.37 |
+| Apple | **Landed** — macOS direct mode (CGEvent chords, `privateState` source, 1500 ms settle window) + editor mode (measured, `NSRange`/`UITextView`); iOS keyboard targets host fields; **visionOS deliberately does not register `select`**, so gating prunes the subtree instead of rendering dead nodes (the design's own escape hatch, exercised on purpose) | Dasher-Apple #60 (2026-11-02), 17 unit tests + registration-ordering contract tests |
+| GTK / Android / Web | Not yet — the subtree does not appear until each registers a handler | — |
+
+**Pending follow-ups:** the gating-liveness migration of Move/Delete onto
+the registered-action family (below; Dasher-Windows #88) and the Windows
+injection-contract fixes (modifier hygiene, off-thread delivery — #89/#90).
 
 ## Motivation
 
@@ -102,8 +111,25 @@ subtree, so nothing is lost permanently.
    does nothing"). The engine change is a **node-level skip**, specified
    precisely:
 
-   - Skip a node **iff it contains an unregistered action element AND
-     retains no other actions** after that element is dropped. Structural
+   - **Liveness is user-perceivability, not engine executability.** An
+     action element is live on a platform iff the user can perceive its
+     effect there. For **custom actions** (`select`) that means:
+     registered. For **built-in edit actions** (`move`, `delete`) it means:
+     the platform demonstrably consumes their C-API event path — the
+     engine-side `ctrlMove`/`ctrlDelete` only mutate internal state
+     (`cursorPos`, `editBuffer`) and never notify the frontend, so an
+     engine "execution" can be user-invisible on a headless engine. This
+     was field-reported as Dasher-Windows #88 (Heide, v0.1.37: the
+     Move/Delete groups render and zoom but act dead), and no platform
+     consumes `ctrlMove` today — so these two migrate onto the
+     **registered-action family**, gating exactly like `select`. Their
+     `dist`/`forward` attributes already parse (the move/delete factories
+     in `ControlManager.cpp`), so the migration is an engine PR, not a
+     redesign. Until it lands the groups remain visible-but-dead on every
+     platform; tracked under Dasher-Windows #88.
+   - Skip a node **iff it contains an action element that is not live on
+     this platform AND retains no other actions** after that element is
+     dropped. Structural
      group nodes (`CTL_SELECT`, the direction groups) carry no actions and
      are never skipped by this rule — they are handled by the next clause.
    - **Cascade-prune emptied ancestors**: if skipping a node's children
@@ -115,7 +141,7 @@ subtree, so nothing is lost permanently.
      (cycles), so the prune must iterate to a fixed point.
    - **Compound nodes** (the house style mixes actions per node — see
      `CTL_CLEAR`, or `speak`+`move` in the Speak subtree): drop the
-     unregistered action element, keep the node if any action remains, skip
+     not-live action element, keep the node if any action remains, skip
      it if none does. A future `<speak what="word"/><select dist="word"/>`
      node therefore degrades to a working speak-only node.
    - **Refs**: a `<ref>` to a named node that was skipped is itself skipped
@@ -139,6 +165,23 @@ subtree, so nothing is lost permanently.
 Selection must be **native OS selection** so everything downstream (the
 target's own Copy toolbar, our toolbar Copy/Cut, keyboard Delete, screen
 readers) acts on it without further work.
+
+**Injection contract** (all keystroke platforms; added after field reports
+Dasher-Windows #89 and #90 — a sticky Control-mode Ctrl degraded a select
+chord to line-granularity, and zooming with a held sticky Ctrl across a
+foreground switch hung the UI thread):
+
+- **Modifier hygiene.** Chord injection owns the *complete* modifier
+  state: release extraneous sticky modifiers before the chord, send the
+  exact chord, restore afterwards. A stale Ctrl/Shift left over from the
+  Control node must never change what a select chord selects. Platforms
+  that keep sticky modifiers should release them on foreground-target
+  change.
+- **Delivery guarantees.** Keystroke/action injection never runs on the
+  UI/render thread; it fails soft (timeout, abort) when the foreground
+  target changes mid-chord, and can never wedge the interface. Silent
+  failure against hostile targets (see Edge cases) is the accepted
+  envelope — a hang is not, and is a bug in every case.
 
 | dist | Windows direct (keystrokes) | Windows editor | Android IME (direct) | GTK | Apple |
 |---|---|---|---|---|---|
@@ -180,8 +223,10 @@ Honesty notes per platform, because the mappings are NOT uniform:
 
 - **Delete after Select**: the target's Delete key deletes the OS selection;
   the resulting text divergence is a genuine re-seed handled by RFC 0015's
-  shadow-compare. The engine's *control-mode Delete* group remains
-  buffer-based and independent — no coupling.
+  shadow-compare. The engine's *control-mode Delete* group is buffer-based
+  today, but per the gating criterion above it migrates onto the
+  registered-action family (Dasher-Windows #88) and then rides the same
+  injection contract as Select — no behavioural coupling beyond that.
 - **Copy/Cut**: the toolbar's *Copy selection* / *Cut selection in target
   app* operate on the OS selection — Select is their missing first half.
 - **Dasher-Windows #79 interaction (verified, not assumed)**: the
@@ -235,10 +280,14 @@ decision, made at implementation time per the RFC 0001 process.
 
 ## Drawbacks
 
-- The engine ships tree structure for an action it cannot execute or
-  verify — the gating rule is the only thing standing between every
-  platform and dead nodes. The rule's precision (above) is the price of
-  sharing control.xml.
+- The engine ships tree structure for actions it cannot execute or
+  verify — the gating rule (live = user-perceivable, per platform) is the
+  price of sharing one `control.xml` across five platforms, and the only
+  thing standing between each of them and dead nodes. The original
+  criterion measured engine executability, which let built-in move/delete
+  through as "handled" while their effects never reached the user — the
+  blind spot was field-reported as Dasher-Windows #88 and the criterion
+  widened in place.
 - Keystroke-based selection is inherently app-dependent (the Windows ⚠ and
   Android app-dependent selectAll rows); we accept envelope parity with
   the existing editing keys rather than chasing per-app perfection.
@@ -330,3 +379,20 @@ decision, made at implementation time per the RFC 0001 process.
   (per RFC 0015's status table; the XTest/Wayland editor-mode-only
   conclusion withdrawn), direction-agnostic sentence-crossing diagnosis,
   test home named, node-template count.
+- 2026-11-02: **status → implemented** — core (DasherCore #106, engine
+  v0.2.28+), Windows (#81, shipped v0.1.37), Apple (#60: macOS direct
+  CGEvent chords + editor measured bounds, iOS keyboard; visionOS
+  deliberately unregistered so gating prunes the subtree by design).
+  GTK/Android/Web register later; the subtree stays invisible until they
+  do.
+- 2026-11-02: field feedback (Heide, v0.1.37; Dasher-Windows #88/#89/#90)
+  exposed two design gaps, fixed in place per the keep-the-body-current
+  rule: (a) the gating criterion now measures **user-perceivable
+  liveness** — built-in `move`/`delete` only mutated engine-side state
+  with no frontend notification, rendering visible-but-dead groups on
+  every platform; they migrate onto the registered-action family (engine
+  PR pending, tracked in #88); (b) a new **injection contract** governs
+  all keystroke platforms — modifier hygiene (release sticky modifiers
+  around chords / on focus change) and off-UI-thread, fail-soft delivery
+  (#89 chord degradation, #90 UI-thread hang; root-cause confirmation
+  from field logs pending, the contract itself is unconditional).

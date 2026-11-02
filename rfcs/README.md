@@ -80,4 +80,4 @@ means "landed on some platforms, not all."
 | [0016](./0016-version-in-settings.md) | Report the app version in Settings (Privacy tab for now) | active | apple, windows, gtk, android, web |
 | [0017](./0017-update-checking.md) | Update distribution and in-app update checking (dual-track) | proposed | apple, windows, gtk, android, web |
 | [0018](./0018-startup-loading-states.md) | Startup loading states — no frozen or black windows | proposed | apple, windows, gtk, android, web, core |
-| [0021](./0021-control-select-subtree.md) | Control-mode Select subtree — native text selection through Dasher | proposed | core, windows, apple, gtk, android, web |
+| [0021](./0021-control-select-subtree.md) | Control-mode Select subtree — native text selection through Dasher | implemented | core, windows, apple, gtk, android, web |

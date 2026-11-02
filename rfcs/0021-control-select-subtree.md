@@ -30,8 +30,15 @@ registered a handler never see the nodes at all.
 | GTK / Android / Web | Not yet — the subtree does not appear until each registers a handler | — |
 
 **Pending follow-ups:** the gating-liveness migration of Move/Delete onto
-the registered-action family (below; Dasher-Windows #88) and the Windows
-injection-contract fixes (modifier hygiene, off-thread delivery — #89/#90).
+the registered-action family is DONE (DasherCore #107 + Dasher-Windows
+#92, both merged 2026-11-02) and the Windows injection-contract fixes
+are DONE (modifier hygiene + off-UI-thread fail-soft focus restore,
+Dasher-Windows #93, merged 2026-11-02 — root causes confirmed from
+field logs before implementation: the stuck-Ctrl shortcut storm and the
+queue-coupled handshake, issue #90; the read-source flap, issue #91).
+Remaining: other platforms' move/delete registrations (Apple/GTK/
+Android follow-ups; the groups simply do not appear until they
+register).
 
 ## Motivation
 
@@ -396,3 +403,10 @@ decision, made at implementation time per the RFC 0001 process.
   around chords / on focus change) and off-UI-thread, fail-soft delivery
   (#89 chord degradation, #90 UI-thread hang; root-cause confirmation
   from field logs pending, the contract itself is unconditional).
+- 2026-11-02 (later): the field logs arrived and CONFIRMED both root
+  causes exactly — #90 was a stuck physical Ctrl turning injected chars
+  into shortcut chords that choked new Outlook (WebView2), with the
+  queue-coupled focus-restore handshake blocking the UI thread for
+  10m49s; #91 (filed from the same logs) was the read-source flap. All
+  fixes landed same day: DasherCore #107 (move/delete migration),
+  Dasher-Windows #92 (#88/#89) and #93 (#90/#91).

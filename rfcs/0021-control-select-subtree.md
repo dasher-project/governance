@@ -27,6 +27,7 @@ registered a handler never see the nodes at all.
 | Core | **Landed** — subtree, gating fixpoint (pessimistic liveness + doom seed + orphan rescue), cascade-prune, compound degradation, parse tests | DasherCore #106 (engine v0.2.28+) |
 | Windows | **Landed** — `select` registration, direct-mode chords, editor-mode measured bounds + active-end machine, settle-window extended to select chords, contract tests | Dasher-Windows #81, shipped v0.1.37 |
 | Apple | **Landed** — macOS direct mode (CGEvent chords, `privateState` source, 1500 ms settle window) + editor mode (measured, `NSRange`/`UITextView`); iOS keyboard targets host fields; **visionOS deliberately does not register `select`**, so gating prunes the subtree instead of rendering dead nodes (the design's own escape hatch, exercised on purpose) | Dasher-Apple #60 (2026-11-02), 17 unit tests + registration-ordering contract tests |
+| Apple Move/Delete | **Landed** — both bridges register `move`/`delete`; direct mode native chords (delete-all = Cmd+A then Delete; sentence/paragraph direct fallbacks tagged in telemetry `fallback=`), editor mode measured UTF-16 moves/deletes via MoveDeleteActions (sentence chaining, surrogate safety) with EditorSeedPolicy re-seeding; **visionOS deliberately does not register** (prunes) | Dasher-Apple #66 (2026-11-03), engine v0.2.28, unit tests |
 | GTK / Android / Web | Not yet — the subtree does not appear until each registers a handler | — |
 
 **Pending follow-ups:** the gating-liveness migration of Move/Delete onto
@@ -36,7 +37,7 @@ are DONE (modifier hygiene + off-UI-thread fail-soft focus restore,
 Dasher-Windows #93, merged 2026-11-02 — root causes confirmed from
 field logs before implementation: the stuck-Ctrl shortcut storm and the
 queue-coupled handshake, issue #90; the read-source flap, issue #91).
-Remaining: other platforms' move/delete registrations (Apple/GTK/
+Remaining: other platforms' move/delete registrations (GTK/
 Android follow-ups; the groups simply do not appear until they
 register).
 

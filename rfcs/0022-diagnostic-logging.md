@@ -24,7 +24,7 @@ spanning every build ever shipped was unparseable for remote debugging.
 | Platform | State | Notes |
 |---|---|---|
 | windows | implemented (PR #82) | LogManager + advanced toggle + rotation + clear |
-| apple | not started | |
+| apple | implemented (Dasher-Apple PR #57: LogManager with version-scoped rotation, 10 MB caps, Advanced-logging toggle, [KB] format; PR #66 adds the Export logs affordance — share sheet on iOS/visionOS, Finder reveal on macOS) | |
 | gtk | not started | |
 | android | not started | |
 

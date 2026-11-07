@@ -82,7 +82,7 @@ outside the settings windows):
 | Property | Type | Notes |
 | --- | --- | --- |
 | `surface` | enum | `main_toolbar`, `status_bar`, `ime_toolbar`, `ime_topbar` |
-| `action` | string | Fixed vocabulary per frontend (`new`, `open`, `save`, `pause_play`, `game_mode`, `settings`, `copy`, `share`, `emoji_toggle`, `speed_up`, `speed_down`, `layout`, `float`, `dock`, `hide`, …) — new identifiers require a schema update |
+| `action` | string | Fixed vocabulary per frontend (`new`, `open`, `save`, `pause_play`, `game_mode`, `settings`, `copy`, `paste`, `cut`, `select_all`, `share`, `emoji_toggle`, `speed_up`, `speed_down`, `layout`, `control_mode`, `turbo`, `float`, `dock`, `hide`, …) — new identifiers require a schema update. `layout` records its destination in `state` (`right`/`left`/`bottom`/`top`/`direct`); for other actions `state` remains toggle-style `on`/`off` (or `paused`/`playing` for `pause_play`) and always records the post-toggle value |
 | `state` | enum, optional | For toggles: `on`/`off`, `paused`/`playing`, `text`/`emoji` |
 
 **`setting_changed`** — the user committed a settings change:
@@ -114,7 +114,8 @@ that predate this amendment remain valid; new instrumentation uses
 | --- | --- |
 | Dasher-Android | Implemented (main toolbar, status-bar speed, IME toolbars; every Settings commit through the parameter rows and the app-level settings) |
 | Dasher-GTK | Implemented (header-bar buttons; every Synced* settings widget) |
-| Dasher-Apple, Dasher-Windows, dasher-web | Not started |
+| Dasher-Apple | Implemented (PR dasher-project/Dasher-Apple#55: main toolbars incl. the iPhone Duo vertical rail, status bars, output-pane toolbars, direct-mode mini-bar; every Settings parameter row plus app-level rows. Keyboard-extension IME surfaces are a follow-up — the iOS keyboard cannot link the analytics module.) |
+| Dasher-Windows, dasher-web | Not started |
 
 ## Motivation
 

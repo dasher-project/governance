@@ -45,14 +45,18 @@ Seven mechanisms, each independently shippable:
 
 ## Motivation — measured, 2026-11-07
 
-| Repo | Latest tag | DasherCore pin | Behind |
+| Repo | Latest release | Engine pin | Engine commits behind |
 | --- | --- | --- | --- |
-| DasherCore | v0.2.26 | — | — |
-| Dasher-Android | v0.1.29 | v0.2.24+4 | 2 |
-| Dasher-GTK | v0.2.16 | v0.2.24 | 2 |
-| Dasher-Windows | v0.1.27 | v0.2.19+2 | 7 |
-| Dasher-Apple | v0.1.8-mac-beta | v0.2.1+1 | **25** |
-| dasher-web | v0.2.8 | v0.2.24+2 | 2 |
+| DasherCore | v0.2.28 (latest tag) | — | — |
+| Dasher-Android | v0.1.29 | c7899b65 (v0.2.24+4) | 7 |
+| Dasher-GTK | v0.2.16 | b7117534 (v0.2.24) | 11 |
+| Dasher-Windows | v0.1.45 | 34a2246e (current) | 0 |
+| Dasher-Apple | v0.1.17-mac-beta | 34a2246e (current) | 0 |
+| dasher-web | v0.2.8 | 296eb458 (v0.2.24+2) | 9 |
+
+(Measured 2026-11-07 from GitHub via `scripts/gen-ecosystem-status.py` — the
+live numbers live in `ecosystem.json`, regenerated weekly. An earlier draft
+of this table used stale local clones and overstated Windows/Apple drift.)
 
 - **The numbers lie to users.** GTK 0.2.16 sounds newer than Android 0.1.29
   but ships the same engine generation; both collide with *DasherCore*

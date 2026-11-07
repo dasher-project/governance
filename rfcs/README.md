@@ -82,4 +82,6 @@ means "landed on some platforms, not all."
 | [0018](./0018-startup-loading-states.md) | Startup loading states — no frozen or black windows | proposed | apple, windows, gtk, android, web, core |
 | [0019](./0019-editor-contract.md) | The editor contract — v5-parity editing for the output pane | proposed | apple, windows, gtk, android, core |
 | [0020](./0020-emoji-in-tree.md) | Emoji in the tree — a settings-gated emoji group for every alphabet | proposed | android, gtk, windows, apple, web, core |
-| [0022](./0022-unified-versioning.md) | Unified versioning and cross-repo release process | draft | governance, core, apple, windows, gtk, android, web |
+| [0021](./0021-control-select-subtree.md) | Control-mode Select subtree — native text selection through Dasher | implemented | core, windows, apple, gtk, android, web |
+| [0022](./0022-diagnostic-logging.md) | Diagnostic logging — shared format, verbosity gating, version-scoped rotation | proposed | windows, apple, gtk, android |
+| [0023](./0023-unified-versioning.md) | Unified versioning and cross-repo release process | draft | governance, core, apple, windows, gtk, android, web |

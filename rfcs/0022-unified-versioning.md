@@ -172,6 +172,21 @@ over the DasherCore submodule and appends it under an "Engine changes"
 heading (full log link included). Android's release workflow adopts this
 first; others copy the step.
 
+### Version-mechanism readiness (audited 2026-11-07)
+
+| Frontend | Version source | Ready for 6.0.0? |
+| --- | --- | --- |
+| Android | `git describe --match 'v*'` (gradle) | ✅ tag and go |
+| GTK | `git describe` + metainfo contract (`tag-release.sh`) | ✅ tag and go (metainfo entry same day) |
+| Windows | `VersionPrefix 0.1.0` in the csproj + `ReleaseVersion` build var | ⚠️ adopt tag-driven or script-set version at release |
+| Apple | `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION` in the pbxproj | ⚠️ same; also retire the `-mac-beta` tag suffix (use `-rc.N`) |
+| web | npm/package version | ⚠️ align at the train |
+
+Only Android and GTK derive version from tags today; Windows/Apple carry
+hand-set project versions and can drift silently (Apple is at 0.1.17-mac-beta
+with 17 PATCHes behind the version scheme's own scheme). Their migration is
+part of boarding the 6.0 train, not a prerequisite for the other platforms.
+
 ## Rollout
 
 | Step | Item | Repos | Status |

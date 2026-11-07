@@ -1,0 +1,37 @@
+name: Ecosystem status
+
+# RFC 0022 item 5: regenerate ecosystem.json (frontend releases + engine pins
+# + drift) weekly and on demand. Commits the diff directly to main when the
+# only change is the data (bot identity); opens a PR never — this file is
+# purely derived, nothing to review.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Regenerate ecosystem.json
+        run: python3 scripts/gen-ecosystem-status.py > ecosystem.json
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Commit if changed
+        run: |
+          git config user.name "dasher-bot"
+          git config user.email "noreply@dasher.at"
+          git diff --quiet ecosystem.json && echo "no change" && exit 0
+          git add ecosystem.json
+          git commit -m "chore: regenerate ecosystem.json (RFC 0022 item 5)"
+          git push

@@ -187,6 +187,23 @@ hand-set project versions and can drift silently (Apple is at 0.1.17-mac-beta
 with 17 PATCHes behind the version scheme's own scheme). Their migration is
 part of boarding the 6.0 train, not a prerequisite for the other platforms.
 
+### 2026-11-08 Amendment: dasher-shared-resources joins the plan
+
+The original automation covered only the DasherCore submodule. **dasher-shared-resources**
+(the RFC 0003 canonical UI string catalogue, consumed by Android, GTK, Windows,
+Apple) had the identical invisible-drift problem — worse: it had never been
+tagged, so drift could not even be measured. Survey at amendment time:
+Android 29 commits behind, GTK 26, Apple 16, Windows 1.
+
+- **Tagged from v0.1.0** (2026-11-08). Translation rounds keep their PR flow;
+  a tag lands per accepted round.
+- **Item 2 generalises**: `engine-bump.yml` becomes `shared-deps-bump.yml`, a
+  matrix over all shared submodules (`DasherCore`, `shared-resources`) — same
+  weekly tag-compare, changelog-in-PR, green-CI-merge contract per component.
+- **Item 5 generalises**: `ecosystem.json` records a `shared_resources_pin`
+  (and drift) per frontend alongside the engine pin.
+- dasher-web consumes no submodule (strings via fetch at build) — exempt.
+
 ## Rollout
 
 | Step | Item | Repos | Status |

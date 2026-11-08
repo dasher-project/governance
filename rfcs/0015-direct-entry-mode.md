@@ -1,17 +1,17 @@
 ---
 rfc: 0015
-title: Direct-entry mode (typing into other applications)
+title: Direct-entry mode and the editor contract
 status: implemented
 platforms: [apple, windows, gtk, android, core]
 created: 2026-08-21
 updated: 2026-11-08
 ---
 
-# Direct-entry mode (typing into other applications)
+# Direct-entry mode and the editor contract
 
 ## Plain-English summary
 
-Dasher is a free tool that lets people who cannot use a keyboard write, by zooming in on text they point to with a mouse, their eyes, or a switch. Normally what you write stays inside Dasher, as if in a built-in notepad. This change lets Dasher type straight into whatever program you are already using, such as an email or a chat window, while a small floating panel keeps the controls you need. Dasher can also read the sentence you are typing into, so its word guesses carry on from what is already on the page. This mainly helps people who cannot use an ordinary keyboard but write all day inside other programs. It now works on Windows and Mac computers, and on Linux ones running the older X11 graphics system.
+Dasher is a free tool that lets people who cannot use a keyboard write, by zooming in on text they point to with a mouse, their eyes, or a switch. Normally what you write stays inside Dasher, as if in a built-in notepad. This change lets Dasher type straight into whatever program you are already using, such as an email or a chat window, while a small floating panel keeps the controls you need. Dasher can also read the sentence you are typing into, so its word guesses carry on from what is already on the page. Dasher's own text box gets the same care: it works like a normal editor again, so you can fix mistakes by hand or paste words in, and clicking in the text makes Dasher carry on from there. This mainly helps people who cannot use an ordinary keyboard but write all day inside other programs. It now works on Windows and Mac computers, on Linux ones running the older X11 graphics system, and the editor box behaves like the old version everywhere.
 
 ## Summary
 
@@ -19,11 +19,21 @@ Dasher's "direct entry" / "keyboard mode" turns the app from a text editor into
 an on-screen input method: the output pane is hidden and text is injected into
 whatever other application the user is working in. Windows and Apple already
 implement this (SendInput, CGEvent posting); GTK implements it via
-`ydotool`/uinput; Android's analogue is the IME (RFC 0008). This RFC writes
+`ydotool`/uinput; Android's analogue is the IME (RFC 0004's keyboard/IME chapter). This RFC writes
 down the cross-platform contract those frontends have converged on: window
 behaviour, availability probing, failure surfacing, delete semantics. The goal
 is that the remaining gaps (notably GTK's focus handling) get closed
 deliberately rather than by accident.
+
+Since November 2026 this RFC also carries the **editor contract** (folded in
+from RFC 0019, which was withdrawn): the output pane must behave like v5's
+editor. The pane is **editable**, user edits are synchronised back into the
+engine's edit buffer so predictions follow what the user typed or pasted
+themselves, placing the caret **re-anchors the model** at that position, and a
+**New** action starts a fresh session by clearing the buffer *and* dropping the
+model's context. Direct entry and the editor are the same context contract
+seen from two surfaces: text landing in another application, and text landing
+in Dasher's own pane. Both run on the same engine APIs.
 
 ## Implementation status
 
@@ -33,11 +43,22 @@ Audited August 2026. Re-synced 2026-11-08.
 | --- | --- | --- |
 | Dasher-Windows | Implemented | `SendInput` with `KEYEVENTF_UNICODE` (VK_BACK for deletes, one per code point, output-callback driven since Aug 2026); canvas-only topmost `WS_EX_NOACTIVATE` window with mini-bar and opacity; target-window tracking; context awareness shipped (#52: seed from target field + clipboard bridge). `MainWindow.axaml.cs`. |
 | Dasher-Apple (macOS) | Implemented | Accessibility-trusted CGEvent posting to the tracked frontmost app; floating non-activating window, "Sending to \<app\>" indicator; sentence-window context seeding and skip guards shipped (November 2026). `DirectModeService.swift`, `MacContentView.swift`. |
-| Dasher-Apple (iOS) | Different mechanism | Keyboard extension (`UITextDocumentProxy.insertText/deleteBackward`); the OS-sanctioned form of direct entry. Onboarding covered by [RFC 0008](./0008-keyboard-onboarding.md). |
+| Dasher-Apple (iOS) | Different mechanism | Keyboard extension (`UITextDocumentProxy.insertText/deleteBackward`); the OS-sanctioned form of direct entry. Onboarding covered by [RFC 0004](./0004-onboarding.md). |
 | Dasher-GTK | Implemented (X11) | `ydotool` injection with daemon probing + failure surfacing + UTF-8-safe deletes ([Dasher-GTK #51](https://github.com/dasher-project/Dasher-GTK/pull/51)); X11 window behaviour via `_NET_WM_WINDOW_TYPE_DOCK` (never focused by EWMH WMs, stays above, all desktops: v5's three GTK4-removed calls in one property, [#62](https://github.com/dasher-project/Dasher-GTK/pull/62)); opacity slider (Preferences → Output, persisted); editor + both bars hide with a floating mini-bar; layout menu (Right/Left/Bottom/Top/Keyboard); caret-watch context triggers and mini-bar parity shipped ([#90](https://github.com/dasher-project/Dasher-GTK/pull/90)). **Wayland:** no-focus/keep-above unavailable to regular apps; the mode works but the user must steer without clicking (see Detailed design, GTK section). |
 | Dasher-Android | N/A (IME) | Standalone apps cannot inject input on Android; the IME service *is* direct entry there. |
 | dasher-web | N/A | Browsers cannot inject input across applications. |
 | DasherCore | N/A | Injection is entirely frontend-side; the engine only needs the output callback (`dasher_set_output_callback`, event types 0 insert / 1 delete). |
+
+**Editor contract** (folded in from RFC 0019; implemented on all four native
+frontends, re-synced 2026-11-08):
+
+| Platform | State | Notes |
+| --- | --- | --- |
+| Dasher-Windows | Implemented | v5-parity editing, caret re-anchor, New, caret-move seeding (#56); seed cap and IME deferral (#64) |
+| Dasher-GTK | Implemented | Synced pane, caret re-anchor, Open seeds (#86); CR-handling fix (#87) |
+| Dasher-Apple | Implemented | #54 |
+| Dasher-Mobile (Android) | Implemented | Editable output field synced with the engine (#40), with `EditorSyncTest` (12 cases) |
+| DasherCore | Complete | Every API the contract needs shipped with the context-awareness work above (v0.2.21/v0.2.22) and is covered by engine tests. |
 
 ## Motivation
 
@@ -60,7 +81,7 @@ depends on platform permission plumbing that the app cannot assume:
 
 Each frontend solved (or didn't solve) these problems independently. The
 behavioural contract should be shared, like other cross-platform UX in RFCs
-0008/0010, so that "enable keyboard mode" behaves recognisably everywhere and
+0004/0010, so that "enable keyboard mode" behaves recognisably everywhere and
 fails loudly everywhere.
 
 ## Detailed design
@@ -198,8 +219,8 @@ text of complex editors (Mail, Pages, browser-based editors), and the
 same signature/formatting/timing variations apply. Android's IME
 `SurroundingText` API already returns a windowed subset rather than the
 full text, confirming this as the correct approach. **All frontends
-implementing clause 8 (or RFC 0019 clause 6) should use sentence-window
-seeding, not full-document seeding.**
+implementing clause 8 (or the editor contract's clause 6 below) should use
+sentence-window seeding, not full-document seeding.**
 
 **Failure modes**: accessibility reads can be slow (read on a background
 thread; timeout ~200 ms), unsupported in some apps (browsers' canvas editors,
@@ -251,7 +272,100 @@ this reason.
   guidance until compositor support exists: X11 sessions get full parity,
   Wayland users are warned in the mode's setup copy.
 - **Android / visionOS / web.** No standalone direct entry; Android's IME is
-  the equivalent surface (onboarding: RFC 0008).
+  the equivalent surface (onboarding: RFC 0004).
+
+## The editor contract (folded in from RFC 0019)
+
+Withdrawn as a standalone RFC on 2026-11-08 and merged here: direct entry
+and the editor are one context contract seen from two surfaces, they share
+every engine primitive, and they had begun amending each other in both
+directions. Everything below is implemented.
+
+v5 shipped a real editor on both desktop frontends, and v6 initially
+regressed against it in two different ways: Windows shipped a read-only
+pane (a long-term v5 user reported after v0.1.26, "clicked at the end of
+the word, the canvas didn't move to that word like it did in 5"), and GTK
+accepted input but never synced it back, silently destroying user-typed
+text on the next engine update. The engine side was already done by the
+context-awareness work above; this contract is the shared frontend wiring.
+
+### The contract
+
+1. **Editable pane.** The output pane accepts user input: typing with a
+   physical keyboard, paste, and caret/selection manipulation. Frontends may
+   disable their widget's undo stack (engine-buffer sync is the source of
+   truth; v5 had no undo parity).
+
+2. **User edits synchronise to the engine.** Edits the user makes in the pane
+   must reach the engine's edit buffer so the language model's context follows
+   them:
+   - call `dasher_seed_buffer(ctx, text, caret_byte_offset)`, converting the
+     widget's caret index with `dasher_byte_offset_from_utf16` (UTF-16
+     widgets) or `dasher_byte_offset_from_codepoints` as appropriate;
+   - debouncing is allowed and recommended (e.g. 300 ms after the last edit);
+     the **caret must never be lost**: pure caret moves (selection change,
+     text unchanged) use `dasher_set_offset` immediately, without debounce;
+   - IME composition: defer seeding until composition commit.
+
+3. **Caret placement re-anchors the model.** Clicking in the pane (or moving
+   the caret by any means) re-anchors predictions at the caret (v5's
+   `SetOffset(iStart)` behaviour). Pure caret move → `dasher_set_offset`;
+   caret move plus pending text change → one `dasher_seed_buffer` covering
+   both.
+
+4. **Engine-origin updates must not loop or jump the caret.** Engine output
+   arrives via the output callback / buffer-change events and rewrites the
+   pane; the frontend must distinguish engine-origin updates from user edits
+   (origin flag or last-pushed-text comparison) so the sync in clause 2 does
+   not feed back. Programmatic rewrites must **restore the caret** to the
+   equivalent position (insert at/before caret advances it; delete before
+   caret pulls it back), never strand it at position 0/end.
+
+5. **New = full reset.** A **New** action (toolbar and direct-mode mini-bar)
+   clears the buffer **and** drops the model context: `dasher_reset(ctx)`.
+   `dasher_reset_output_text` alone is *not* New: the model would resume
+   mid-sentence (GTK's `DasherBridge::reset()` documents this exact v5
+   distinction from `SetBuffer(0)`). Clearing via the buffer-cleared event
+   (output event 2) must not inject backspaces. This is the same semantic
+   RFC 0005's migration parity requires for v5 users.
+
+6. **Direct-entry caret moves re-seed** (the trigger rule shared with clause
+   8 above). A caret move **within an already-focused target field** is a
+   context trigger equal to a focus change: Windows subscribes to UI
+   Automation `TextSelectionChanged`; GTK uses AtkText
+   `caret-moved`/`text-changed`; Apple uses
+   `NSAccessibilitySelectedTextChanged`/`AXSelectedTextRange`. Stale events
+   must be dropped at seed time (the target-must-be-foreground guard that
+   the Windows review established).
+
+7. **Failure modes.** Very long documents may seed a trailing window of text
+   (cap chosen per frontend, documented); if the engine is unavailable the
+   pane degrades to a plain editor for the session, never a dead pane.
+
+### Engine interface (all shipped)
+
+| Call | Use |
+| --- | --- |
+| `dasher_seed_buffer(ctx, text, caret_offset)` | user edits + caret (debounced); target-field re-seed |
+| `dasher_set_offset(ctx, offset)` | pure caret re-anchor |
+| `dasher_byte_offset_from_utf16` / `_from_codepoints` | widget caret → engine bytes |
+| `dasher_get_output_text(ctx)` | pane content on (re)load |
+| `dasher_reset_output_text(ctx)` | clear buffer, keep model position |
+| `dasher_reset(ctx)` | **New**: buffer + context + rate window |
+
+### Platform notes
+
+- **Windows** (Avalonia `TextBox`): `IsReadOnly=false`, `UndoLimit=0`;
+  `CaretIndex` for caret; loop-guard flag around engine-origin `Text` sets
+  with explicit caret restore.
+- **GTK** (`Gtk::TextView`): connect `GtkTextBuffer`
+  insert/delete/notify::cursor-position; guard around `set_text` pushes from
+  `OnBufferChange`; the pre-implementation behaviour silently destroyed
+  user input and was treated as a bug until the sync landed (#86).
+- **Apple**: audit `DasherEdit` paths per platform (macOS pane, iOS
+  keyboard-extension buffer rules differ).
+- **Android**: the IME already owns the target buffer; clauses 1-5 reduce
+  to New + reset semantics there.
 
 ## Drawbacks
 
@@ -261,6 +375,11 @@ this reason.
   manual pass (see Testing).
 - Some clauses (opacity, mini-bar) are cosmetic; enforcing them uniformly may
   not be worth blocking a frontend that otherwise implements the mode.
+- Editor sync complexity: the loop-guard and caret-preservation logic
+  (editor clause 4) is the genuinely fiddly part; a naive implementation
+  oscillates or fights the user's caret.
+- Editor undo is sacrificed in v1 (engine sync is the undo surface of
+  record).
 
 ## Alternatives considered
 
@@ -271,17 +390,26 @@ this reason.
   the engine.
 - **Keyboard-extension/IME everywhere.** Only Android and iOS offer it; no
   desktop OS lets a normal app register as an IME for other apps.
+- **Read-only pane + caret-click only** (the minimal reading of the editor
+  user report): cheap, but abandons paste/type-then-predict, which v5 had
+  and the engine already supports; rejected.
+- **New engine edit-op API** (incremental insert/delete instead of re-seed):
+  unnecessary today: `seed_buffer` is fast enough at realistic sizes and
+  already tested; revisit only if profiling the 100k-char cap says otherwise.
 
 ## Prior art
 
 - **Dasher v5 GTK direct mode**: XTest injection + hide editor + keep-above +
   `accept_focus(false)` + stick (`dasher_main.cpp` `toggle_direct_mode`); the
   behavioural template for this RFC.
+- **Dasher v5 editors**: Win32 `CEdit` (click → `SetOffset`, editable,
+  forward-keyboard modes) and GTK `dasher_editor` (bidirectional buffer,
+  control-node editing); the template for the editor contract.
 - **Windows On-Screen Keyboard / Tablet input panel**: `WS_EX_NOACTIVATE`
   topmost translucent window; the pattern Dasher-Windows follows.
 - **CharaChorder/Keyviz-style tools, ydotool/wtype**: Linux injection
   helpers; each requires the daemon/permissions probing described here.
-- **RFC 0008**: the IME/keyboard-extension *onboarding* flows; 0015 covers
+- **RFC 0004** (keyboard/IME chapter): the IME/keyboard-extension *onboarding* flows; 0015 covers
   the standalone-app injection mode and cross-references it.
 
 ## Testing
@@ -301,6 +429,17 @@ Per [RFC 0011](./0011-testing.md). Mixed automated + manual:
   exactly one character is removed; kill the daemon/permission mid-session →
   confirm a visible error and clean exit from the mode. Record the pass in the
   PR that changes this behaviour.
+- **Editor contract (engine invariants, DasherCore `tests/`)**: seed-on-edit
+  equivalence (`seed_buffer` then `get_offset` == caret bytes);
+  `dasher_reset` vs `dasher_reset_output_text` context-drop difference.
+  Much of this exists via the context-awareness test work; extend where the
+  reset distinction is unpinned.
+- **Editor contract (frontend, automated)**: Windows engine-integration
+  tests extend `EngineCApiTests`; UI-loop behaviour is manual.
+- **Editor contract (manual)**: click-mid-word re-anchor; type/paste into
+  pane then predict; engine ↔ pane no-loop hammering; New resets to root
+  predictions; direct-entry caret moves re-seed; IME composition (CJK);
+  regression pass over focus-switch seeding.
 
 ## Test matrix
 
@@ -315,6 +454,16 @@ Per [RFC 0011](./0011-testing.md). Mixed automated + manual:
 | 7: clipboard bridge | GTK/Windows | — | Sel/Copy/Paste from mini-bar |
 | 8: context awareness (tier 1-3) | Windows | — (manual only) | switch fields in Outlook |
 | 8: sentence-window trimming | all | `TargetContextDecision` unit tests | — |
+| Editor 1: editable pane | all | — | [checklist#editor](../tests/checklist.md#editor--output-pane-rfc-0015) |
+| Editor 2: edits sync to engine | GTK | `engine_contract_tests: editor_contract seed/offset/reset` | [checklist#editor](../tests/checklist.md#editor--output-pane-rfc-0015) |
+| Editor 2: edits sync to engine | Android | `EditorSyncTest` (12 cases) | [checklist#editor](../tests/checklist.md#editor--output-pane-rfc-0015) |
+| Editor 2: edits sync to engine | Windows | — (manual only) | [checklist#editor](../tests/checklist.md#editor--output-pane-rfc-0015) |
+| Editor 3: caret re-anchors | GTK | `engine_contract_tests: set_offset re-anchors` | click mid-word |
+| Editor 3: caret re-anchors | Android | `EditorSyncTest.pure_caret_move_in_sync_reanchors` | tap mid-word |
+| Editor 4: no loop / caret preserved | GTK | `MainWindow` loop-guard (manual verify) | type + verify no flicker |
+| Editor 5: New = full reset | all | `engine_contract_tests: reset clears` | press New, verify restart |
+| Editor 6: caret triggers (clause 8) | GTK | `test_target_context_watcher.cpp` (26 cases) | click in target app |
+| Editor 7: long-doc cap | all | — (deferred, see #57 Windows) | open 2MB file |
 
 ## Unresolved questions
 
@@ -329,17 +478,30 @@ Per [RFC 0011](./0011-testing.md). Mixed automated + manual:
 4. **Wayland text-injection protocol** (`zwp_text_input_v3` is for IMEs;
    `virtual-keyboard` protocol exists on some compositors): a viable alternative
    to ydotool on Wayland? **Open.**
+5. **Editor long-document cap:** seed trailing N chars. What N? (Proposal:
+   100 000 UTF-16 units, per-frontend override.) Partially addressed on
+   Windows by the seed cap (#64). **Open.**
+6. **Editor undo:** is `UndoLimit=0` acceptable long-term, or should a later
+   amendment specify an undo-aware sync? **Open.**
+7. **Android/Apple mapping of editor clauses 1-5** (audit before further
+   implementation claims). **Open.**
+8. **Control-node editing parity** (`ctrl_move`/`ctrl_delete`): in scope for
+   a future amendment once Control Mode resurfaces in the settings IA.
+   **Open.**
 
 ## Resolution
 
 - State: implemented
 - Decided by: maintainers
 - Date: 2026-11-08
-- Decision: The contract is implemented on Windows, Apple, and GTK (X11), each
-  including the context-awareness clauses. Android's equivalent surface is the
-  IME (RFC 0008); web has no equivalent by design. The Wayland focus/keep-above
-  question (Q1) and the engine flag question (Q2) remain open.
-- Open sub-questions: Q1, Q2, Q3, Q4.
+- Decision: The direct-entry contract is implemented on Windows, Apple, and
+  GTK (X11), each including the context-awareness clauses; the editor
+  contract (folded in from RFC 0019) is implemented on all four native
+  frontends. Android's equivalent surface is the IME (RFC 0004's
+  keyboard/IME chapter); web has no equivalent by design. The Wayland
+  focus/keep-above question (Q1) and the engine flag question (Q2) remain
+  open.
+- Open sub-questions: Q1-Q8.
 
 ## History
 
@@ -350,3 +512,7 @@ Per [RFC 0011](./0011-testing.md). Mixed automated + manual:
 - _2026-09-08_ - _Clause 8 trigger amendment (with RFC 0019): caret moves within an already-focused target field are context triggers alongside focus changes; platform caret-moved/selection-changed events listed; stale events dropped at seed time (tracked target must still be foreground)._
 - _2026-09-13_ - _Sentence-window amendment: tier-2/tier-3 context seeding now trims to the sentence around the caret (~200 UTF-16 units, symmetric trimming for the shadow-compare) instead of seeding the full document. Full-document reads from Outlook's UIA provider returned inconsistent results (signatures, formatting, timing) — the shadow-compare could never match and every keystroke triggered a visible canvas reset. Manual re-anchor button recommended on the mini-bar. All platforms should adopt sentence-window seeding (Dasher-Windows #68)._
 - 2026-11-08 — plain-English summary added, prose simplified for readability, implementation status re-synced against the frontend repos.
+- 2026-11-08 — RFC 0019 (the editor contract) folded in as a chapter: its
+  clauses, engine interface, platform notes, test rows, and open questions
+  (now Q5-Q8) moved here, and 0019 is a redirect stub marked withdrawn. The
+  sentence-window rationale now has one home (this file) instead of two.

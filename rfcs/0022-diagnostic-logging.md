@@ -190,6 +190,17 @@ Testers can't be expected to navigate `%APPDATA%\Dasher` or run
   lifecycle/verbose split is a deliberate simplification to two levels.
   The field lesson is that testers don't distinguish five levels.
 
+## Where each signal lives (observability map)
+
+The three observability RFCs split cleanly by signal; when adding a new
+signal, put it in the row it belongs to:
+
+| Signal | RFC | Where it lives |
+| --- | --- | --- |
+| Usage events (`app_launched`, `ui_action`, `setting_changed`, …) | [0001](./0001-analytics.md) | PostHog events behind the analytics opt-in |
+| Crashes (`$exception` with scrubbed stack + engine log tail) | [0009](./0009-crash-reporting.md) | Crash file at crash time; PostHog Error Tracking on next launch |
+| Diagnostic logs (`keyboard_debug.log`, `eyegaze.log`) | [0022](./0022-diagnostic-logging.md) (this RFC) | On-disk files testers can send; version-scoped rotation |
+
 ## Unresolved questions
 
 - Should the engine (DasherCore) also write to these files via the

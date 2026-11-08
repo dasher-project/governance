@@ -1,21 +1,21 @@
 {
-  "updated": "2026-11-08T11:22:23Z",
+  "updated": "2026-11-08T16:11:03Z",
   "engine": {
     "latest": "v0.2.28",
     "capi_version": 3
   },
   "frontends": {
     "dasher-android": {
-      "latest": "v0.1.30",
+      "latest": "v6.0.0",
       "engine_pin": "v0.2.26",
       "behind": 7,
       "shared_resources_pin": "v0.1.1",
       "shared_resources_behind": 1
     },
     "dasher-gtk": {
-      "latest": "v0.2.16",
-      "engine_pin": "v0.2.24",
-      "behind": 11,
+      "latest": "v6.0.0",
+      "engine_pin": "v0.2.28",
+      "behind": 0,
       "shared_resources_pin": "v0.1.2",
       "shared_resources_behind": 0
     },

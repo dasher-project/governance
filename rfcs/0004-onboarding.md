@@ -1,25 +1,27 @@
 ---
 rfc: 0004
-title: First-run onboarding experience
+title: First-run onboarding experience (incl. keyboard/IME enablement)
 status: proposed
 platforms: [apple, windows, gtk, android, core]
 created: 2026-06-17
 updated: 2026-11-08
 ---
 
-# First-run onboarding experience
+# First-run onboarding experience (incl. keyboard/IME enablement)
 
 ## Plain-English summary
 
 Dasher is a free tool that lets people who cannot use a keyboard write, by
 zooming in on text they point to with a mouse, their eyes, or a switch. It is
 powerful but hard to start using: new users often feel lost or even queasy the
-first time they open it, and many give up. This proposal suggests a short
-guided introduction when someone first opens the app, so they can learn the
-basics before writing. It draws on expert help and user testing before anything
-is built, because we do not yet know what works best. It would help new users,
-and the caregivers who set Dasher up for them. This is still at the ideas
-stage.
+first time they open it, and many give up. On Apple and Android devices,
+Dasher can also stand in as the keyboard for the whole device, but turning
+that on is a maze of settings screens that defeats many people. This
+proposal suggests a short guided introduction when someone first opens the
+app: learn the basics, and if relevant, switch on the Dasher keyboard with
+help. It draws on expert help and user testing before anything is built,
+because we do not yet know what works best. It would help new users, and the
+caregivers who set Dasher up for them. This is still at the ideas stage.
 
 ## Summary
 
@@ -35,6 +37,14 @@ due to segfaults and was never re-enabled). This RFC frames the onboarding
 problem, documents what exists, identifies the design questions that need
 UX expert input, and proposes a phased implementation plan.
 
+Since November 2026 this RFC also covers **keyboard and IME enablement** on
+Apple and Android, folded in from RFC 0008 (withdrawn; see the "Keyboard and
+IME enablement" chapter). Installing the app is not enough to use Dasher as
+the system keyboard: the user must enable it in OS settings and select it as
+the active input source. That multi-step settings dance is the first-run
+journey's most common failure point and the single largest source of "the
+keyboard doesn't work" support requests.
+
 ## Implementation status
 
 Audited August 2026. Not implemented.
@@ -46,6 +56,12 @@ that is a single gesture tip, not an onboarding flow.
 
 Game Mode exists on all platforms and is the closest thing to guided practice,
 but the user invokes it at any time. It is never triggered on first launch.
+
+Keyboard and IME enablement (folded in from RFC 0008) is likewise not
+implemented. Dasher-Apple ships the iOS keyboard extension, but the host app
+never mentions it: no enablement guide, no Full Access check, no deep link
+into system settings. Dasher-Mobile ships the Android IME, but there is no
+in-app flow to guide the user to enable or select it.
 
 This RFC still needs UX research before it can move out of `proposed` (see
 "Design questions needing UX expert input").
@@ -307,6 +323,158 @@ If UX research (Q3) determines that per-method guidance is needed:
 - First-launch flag via `Glib::KeyFile` or `GSettings`.
 - Game Mode practice via `DasherController` / `CScreenGameModule`.
 
+## Keyboard and IME enablement (Apple and Android)
+
+Folded in from RFC 0008 (withdrawn 2026-11-08) so the whole first-run story
+lives in one place. Dasher ships as both a standalone writing app and a
+system keyboard: on Apple an iOS custom keyboard extension
+(`NSExtensionPointIdentifier com.apple.keyboard-service`), on Android an
+Input Method Editor (`InputMethodService`, `BIND_INPUT_METHOD`). Installing
+the app is not enough. The user must explicitly **enable** the keyboard in
+OS settings and then **select** it as the active input source.
+
+### Why this is part of onboarding
+
+- On Android, fewer than half of users who install an IME-based keyboard
+  succeed in enabling it without guidance. The flow spans **Settings →
+  System → Keyboard → On-screen keyboard → enable Dasher → "Back" → Default
+  keyboard → pick Dasher**, optionally followed by **Privacy → Advanced
+  input methods → grant input permission** (needed for clipboard and
+  full-text access). Each step is a place to lose the user.
+- On iOS, the flow is **Settings → General → Keyboard → Keyboards → Add New
+  Keyboard → Dasher → (trust prompt "Allow Full Access")**. The "Full
+  Access" prompt in particular scares users; without it the engine
+  clipboard and speak callbacks are unavailable.
+- The state is opaque: the app cannot silently know whether the user
+  completed the steps. Both platforms expose APIs to query it, but neither
+  frontend does today. There is no in-app guidance, no "you're nearly
+  there", no re-prompt after the user returns from system settings.
+- This is platform-specific plumbing that does not belong in DasherCore
+  (the engine), but the detection queries and the step model are shared
+  enough that one chapter keeps Apple and Android aligned.
+
+### Shared state model
+
+A keyboard onboarding flow has three observable states plus a "needs
+permission" sub-state:
+
+| State | Meaning |
+| --- | --- |
+| `notEnabled` | The keyboard/IME is installed but not turned on in system settings. |
+| `enabledNotDefault` | The keyboard/IME is enabled but not the currently selected input source. |
+| `needsPermission` | Enabled, but the OS-level input/Full-Access permission is off (limits clipboard, speak, etc.). |
+| `ready` | Enabled, selected, permission sufficient. |
+
+Each frontend exposes:
+
+1. A **detection** function returning the current state.
+2. A **deep-link** to the exact system settings screen for the current state.
+3. A **first-run prompt** plus a **resume-on-return** check (re-detect when
+   the app regains foreground after the user is sent to system settings).
+4. A **manual re-trigger** from Settings (so users can re-run the flow later).
+
+Detection must be **cheap and side-effect free** (called in `onResume` /
+`scenePhase` becoming active).
+
+### Android (IME)
+
+**Detection.** `InputMethodManager` + `Settings.Secure`:
+
+- **Enabled?** The IME's component name (`ComponentName(this, DasherImeService::class.java)`,
+  flattened) appears in `Settings.Secure.getString(
+  ENABLED_INPUT_METHODS)`, a colon-separated list of enabled IMEs.
+- **Default?** On Android 11+, `imm.getEnabledInputMethodList()` plus the
+  default-IME intent resolution. There is no fully public "current default
+  IME" API before Android 14. The pragmatic check is whether Dasher's IME
+  is enabled *and* the user has only one IME enabled, or whether the
+  system's `Settings.Secure.DEFAULT_INPUT_METHOD` value equals the Dasher
+  IME component. Fall back to "enabledNotDefault" if ambiguous.
+- **Permission?** The input-method binding itself is the permission; the
+  separate "input data access" prompt (Android 14+,
+  `INPUT_METHOD_SERVICES_PRIVILEGED`) governs clipboard and commit-text
+  visibility beyond the focused field. Query via the IME service's
+  `isEnabledForInput` / shouldShow warnings when commiting.
+
+**Deep-links.** Use the documented `Intent` actions:
+
+| State | Intent |
+| --- | --- |
+| `notEnabled` | `android.provider.Settings.ACTION_INPUT_METHOD_SETTINGS` (manage keyboards) |
+| `enabledNotDefault` | `android.provider.Settings.ACTION_INPUT_METHOD_SELECTOR` (Android 11+ picker) or re-use `ACTION_INPUT_METHOD_SETTINGS` with guidance copy |
+| `needsPermission` | `android.provider.Settings.ACTION_INPUT_METHOD_SETTINGS` + inline guidance (there is no dedicated permission screen for IME input access pre-14) |
+
+**Flow.**
+
+1. On first run (flag in `SharedPreferences`: `onboarding_ime_shown`), show
+   a modal: "Use Dasher as your keyboard" with a one-line explanation and a
+   primary button **"Enable keyboard"** (deep-link to input-method
+   settings) and a secondary **"Not now"**.
+2. The user is sent to system settings; the app goes to the background.
+3. On `onResume`, re-detect. If `ready`, celebrate and dismiss. If still
+   `notEnabled`/`enabledNotDefault`, show a persistent, dismissible banner
+   ("Almost there: select Dasher as your keyboard") with an **"Open
+   settings"** button.
+4. A "Keyboard setup" entry in Settings re-runs the flow.
+
+The IME service itself does **not** run onboarding (it is the wrong process
+and may not exist yet). The main app drives the flow and shares the
+persisted onboarding flag via the app's `filesDir` (which, per RFC 0007 and
+the existing shared-data pattern, is the same path the IME reads at its
+engine creation).
+
+### Apple (iOS keyboard extension)
+
+**Detection.**
+
+- **Enabled?** `UIApplication.openSettingsURLString` does not expose
+  keyboard state directly. The pragmatic approach is to attempt to detect
+  via `UIInputViewController.hasFullAccess` (only valid inside the
+  extension) plus a heartbeat: the extension writes a flag into the **App
+  Group container** (`group.at.dasher.Dasher`) the first time it is loaded
+  by the system (i.e. the user actually opened the keyboard picker). The
+  main app reads that flag to know "the extension has been activated at
+  least once."
+- **Full Access?** `UIDevice` does not expose it; only the extension's
+  `hasFullAccess` knows. The extension reports this through the App Group
+  flag alongside the heartbeat.
+- **Selected?** Best-effort: the heartbeat timestamp being recent is a
+  proxy.
+
+**Deep-link.** `UIApplication.shared.open(URL(string: UIApplication.openSettingsURLString)!)`
+opens the app's settings; from there the user navigates to Keyboard. Apple
+provides no more specific deep-link, so the modal must include **step-by-step
+copy** ("Settings → General → Keyboard → Keyboards → Add New Keyboard →
+Dasher") and, for Full Access, "tap Dasher → turn on Allow Full Access."
+
+**Flow.**
+
+1. First-run modal: "Install Dasher keyboard" with the step copy and an
+   **"Open Settings"** button (`openSettingsURLString`).
+2. On `scenePhase` becoming `.active`, re-read the App Group heartbeat.
+   Update state, show a confirmation when the heartbeat indicates success.
+3. The Full Access step has its own explanatory copy (why it's needed:
+   clipboard, speak, training-file write-back) and a clear opt-out note
+   (the keyboard works for basic entry without it).
+
+### Copy and translation
+
+All onboarding copy goes through the RFC 0003 i18n pipeline (engine
+`strings_*.json` for any engine-side strings; platform-native catalogs for
+the chrome). The "Allow Full Access" / "Input permission" explanations in
+particular must be plain-language and localised: they are the scariest
+step.
+
+### Scope boundaries
+
+- The **generic** first-run experience (welcome, input handshake,
+  first-zoom tutorial) is the rest of this RFC; this chapter is only the
+  keyboard-enablement sub-flow.
+- **Switch / access-method setup** belongs to
+  [RFC 0010](./0010-input-access-methods.md), not here.
+- **App-group / shared-storage layout** is defined by the existing
+  shared-data pattern (the same `userDir` the engine reads); this chapter
+  only depends on it.
+
 ## Drawbacks
 
 - **Large effort.** A proper onboarding flow is one of the biggest features for
@@ -322,6 +490,16 @@ If UX research (Q3) determines that per-method guidance is needed:
   bake in today's assumptions. The point of the UX research is that it may propose
   a better mechanism; the engineering choice should follow the evidence, not lead
   it.
+- **Keyboard detection is fragile across OS versions** (the Android
+  default-IME query and the Apple Full Access detection are both partially
+  heuristic). The detection must degrade gracefully (assume
+  `enabledNotDefault` on uncertain queries, never block the user). The iOS
+  heartbeat pattern is a workaround for a missing API and could break if
+  Apple changes App Group visibility for extensions.
+- **Keyboard onboarding modals are friction** for users who installed the
+  standalone app to use it *as an app*, not as a keyboard. Mitigation: only
+  show the keyboard onboarding if the keyboard target is bundled, and offer
+  a "don't show again."
 
 ## Alternatives considered
 
@@ -346,6 +524,13 @@ Host a tutorial on the website that users complete before installing. Rejected
 because the tutorial needs to work with the user's actual input device and the
 real Dasher canvas. A web simulation wouldn't reflect their setup.
 
+### Rely on OS-level prompts for keyboard enablement
+
+Status quo for the keyboard/IME chapter. Confirmed poor conversion; the
+chapter exists because that is not good enough. (Fully automating via MDM or
+accessibility is not possible for a consumer app, and neither platform
+allows an app to silently enable its own keyboard.)
+
 ## Prior art
 
 - **Grid 3 (Smartbox):** First-run wizard with input method selection, 
@@ -354,9 +539,14 @@ real Dasher canvas. A web simulation wouldn't reflect their setup.
 - **Proloquo2Go:** Crescendo vocabulary onboarding with "add first words" guided
   setup.
 - **SwiftKey / Gboard:** Glide typing tutorial that appears on first use: a
-  short "try typing HELLO" prompt.
-- **v5 Dasher:** Had no onboarding. Users were dropped into the editor. The
-  design guide §8 was written specifically to address this gap.
+  short "try typing HELLO" prompt. Both also ship a guided "Enable keyboard"
+  first-run flow on Android with the exact deep-links in the keyboard/IME
+  chapter, plus a returning-user banner: the de facto user expectation.
+- **Fleksy / Grammar Keyboard** on iOS use the step-copy +
+  `openSettingsURLString` pattern from the keyboard/IME chapter.
+- **v5 Dasher:** Had no onboarding, and no keyboard extension. Users were
+  dropped into the editor. The design guide §8 was written specifically to
+  address this gap; the keyboard is a new concern for v6.
 
 ## Unresolved questions
 
@@ -370,6 +560,17 @@ real Dasher canvas. A web simulation wouldn't reflect their setup.
 5. **Measurement:** how do we measure whether onboarding reduces abandonment?
    **Open.** Analytics ([RFC 0001](./0001-analytics.md)) could track completion
    rate, time-to-first-word, and retention by path.
+6. **Default-IME detection on Android < 14** (keyboard/IME chapter): most
+   reliable unprivileged heuristic still to be chosen. **Open.**
+7. **Re-prompt cadence** (keyboard/IME chapter): how often to re-offer the
+   keyboard setup if declined. **Open.**
+8. **Full Access messaging** (keyboard/IME chapter): copy to be finalised.
+   **Open.**
+9. **IME-engine sharing:** should the keyboard onboarding flag live in the
+   shared `userDir` or in the main app's private prefs? **Open.**
+10. **Does keyboard onboarding warrant a small DasherCore C API** ("mark
+    keyboard onboarding complete") so all frontends share the SSOT, or is
+    per-frontend persistence correct? **Open.**
 
 ## Resolution
 
@@ -383,3 +584,8 @@ real Dasher canvas. A web simulation wouldn't reflect their setup.
 ## History
 
 - 2026-11-08 — plain-English summary added, prose simplified for readability, implementation status re-synced against the frontend repos.
+- 2026-11-08 — RFC 0008 (keyboard extension / IME onboarding) folded in as
+  the "Keyboard and IME enablement" chapter; its open questions moved here
+  (items 6-10), and 0008 is now a redirect stub marked withdrawn. The two
+  were merged before either was implemented, so no shipped behaviour
+  changed.

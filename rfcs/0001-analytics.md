@@ -325,7 +325,12 @@ Rely on OS-level telemetry (Windows Diagnostic Data, macOS analytics).
 1. **Who hosts the PostHog instance?** **Resolved (2026-08-01).** A self-hosted
    PostHog instance is live; Apple (iOS, macOS) and Windows ship against it.
 2. **Data retention period?** **Open.** Proposed 13 months (the PostHog default).
-   Confirm against the configured value on the live instance.
+   **Update (2026-11-08):** the retention period is not exposed through the
+   project settings API; it is set at the billing/plan level and needs a
+   one-off check in the PostHog dashboard. Verified from the live project
+   settings the same day: IP anonymisation is enabled, and session replay is
+   opted out (so its 30-day replay retention is moot). The hosting decision
+   below also remains open.
 3. **Should crash reporting be opt-in separately from usage analytics?**
    **Resolved (2026-08-01).** No. Crashes use the same opt-in, specified in
    [RFC 0009](./0009-crash-reporting.md).

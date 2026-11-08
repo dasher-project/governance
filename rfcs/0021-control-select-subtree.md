@@ -250,7 +250,10 @@ Honesty notes per platform, because the mappings are NOT uniform:
   app* operate on the OS selection: Select is their missing first half.
 - **Dasher-Windows #79 interaction (verified, not assumed)**: the
   shadow-compare is caret-anchored, not text-only. `SentenceWindow.Trim`
-  windows the target read at the caret. Any selection
+  windows the target read at the caret (the sentence-window mechanism is
+  specified and rationalised in
+  [RFC 0015](./0015-direct-entry-mode.md); this section describes only its
+  interaction with Select). Any selection
   that moves the caret-anchored window across a sentence boundary (backward
   paragraph selects by definition; forward selects past a delimiter too)
   changes the sentence window and is a genuine `Seed` verdict under the

@@ -16,7 +16,7 @@ Legend: ✅ previously verified · ⚠️ known gap or platform-specific issue �
 
 ---
 
-## Editor — output pane (RFC 0019)
+## Editor — output pane (RFC 0015)
 
 *Applies to: GTK, Android (main app), Windows (text mode)*
 
@@ -215,7 +215,7 @@ methods (eye-gaze is impractical on mobile).
 
 ### Keep (lower priority)
 - **Onboarding** (RFC 0004, still `proposed`) — needs UX validation first
-- **Keyboard extension onboarding** (RFC 0008) — Apple/Android IME enablement
+- **Keyboard extension onboarding** (RFC 0004) — Apple/Android IME enablement
 - **v5 migration completeness** (RFC 0005) — Windows is the gap
 - **Multi-alphabet workflows** — switching mid-session, per-alphabet training
 - **Game mode** — real but not on Heide's critical path
@@ -240,4 +240,4 @@ not missing functionality:
 ### Explicitly deprioritised
 - Screen reader compatibility of Dasher's own UI — not a priority
 - Data portability beyond training-text export/import — not a priority
-- Undo/redo — deferred by design (RFC 0019 OQ 2)
+- Undo/redo — deferred by design (RFC 0015 editor OQ)

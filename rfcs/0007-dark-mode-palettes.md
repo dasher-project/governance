@@ -97,6 +97,14 @@ manifest, or the generic settings UI that every frontend renders. The model
 persists via a small `appearance_settings.json` sidecar alongside
 `dasher_settings.xml`.
 
+This is the **sidecar pattern**: frontend-owned state persisted as a small
+JSON file next to `dasher_settings.xml`, outside the engine parameter
+schema. [RFC 0010](./0010-input-access-methods.md) reuses it for
+`access.json` and [RFC 0022](./0022-diagnostic-logging.md) for the
+`last_version.txt` rotation marker. Future persistence work that is a
+shell concern rather than an engine parameter should follow the same
+shape; this RFC is its named origin.
+
 A stateful model is required rather than the originally-proposed stateless
 "switch to my companion" call. The stateless version has a
 **persistence bug**: it wrote the auto-resolved palette to the persistent

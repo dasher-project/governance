@@ -67,22 +67,22 @@ specs are not your day job.
 | [0001](./0001-analytics.md) | Privacy-preserving analytics and crash reporting | implemented | apple, windows, gtk, android |
 | [0002](./0002-lucide-icons.md) | Adopt Lucide as the cross-platform icon set | implemented | apple, windows, gtk, android |
 | [0003](./0003-multilingual-ui.md) | Multilingual UI support across all frontends | active | apple, windows, gtk, android, core |
-| [0004](./0004-onboarding.md) | First-run onboarding experience | proposed | apple, windows, gtk, android, core |
+| [0004](./0004-onboarding.md) | First-run onboarding experience (incl. keyboard/IME enablement) | proposed | apple, windows, gtk, android, core |
 | [0005](./0005-v5-migration.md) | Dasher v5 → v6 migration: settings, alphabets, and user data | implemented | apple, windows, gtk, core |
 | [0006](./0006-settings-ia.md) | Settings information architecture and progressive disclosure | implemented | apple, windows, gtk, android, core |
 | [0007](./0007-dark-mode-palettes.md) | Dark mode support via appearance-aware colour palettes | implemented | apple, windows, gtk, android, web, core |
-| [0008](./0008-keyboard-onboarding.md) | Keyboard extension / IME onboarding (Apple & Android) | proposed | apple, android, core |
+| [0008](./0008-keyboard-onboarding.md) | Keyboard extension / IME onboarding (Apple & Android) — folded into 0004 | withdrawn | apple, android, core |
 | [0009](./0009-crash-reporting.md) | Crash reporting & engine diagnostics capture | implemented | apple, windows, gtk, android, core |
 | [0010](./0010-input-access-methods.md) | Input & access methods (steering/selection/dwell/switch/eye-gaze/joystick) | active | apple, windows, gtk, android, core |
 | [0011](./0011-testing.md) | Testing expectations for RFCs | active | apple, windows, gtk, android, web, core |
 | [0012](./0012-typing-rate.md) | Typing rate (CPS / WPM) display | implemented | apple, windows, gtk, android, core |
 | [0013](./0013-custom-rendering.md) | Node-tree rendering API (custom rendering) | active | apple, windows, gtk, android, web, core |
 | [0014](./0014-image-labels.md) | Image labels for alphabet symbols | implemented | apple, windows, gtk, android, web, core |
-| [0015](./0015-direct-entry-mode.md) | Direct-entry mode (typing into other applications) | implemented | apple, windows, gtk, android, core |
+| [0015](./0015-direct-entry-mode.md) | Direct-entry mode and the editor contract | implemented | apple, windows, gtk, android, core |
 | [0016](./0016-version-in-settings.md) | Report the app version in Settings (Privacy tab for now) | active | apple, windows, gtk, android, web |
 | [0017](./0017-update-checking.md) | Update distribution and in-app update checking (dual-track) | active | apple, windows, gtk, android, web |
 | [0018](./0018-startup-loading-states.md) | Startup loading states — no frozen or black windows | active | apple, windows, gtk, android, web, core |
-| [0019](./0019-editor-contract.md) | The editor contract — v5-parity editing for the output pane | implemented | apple, windows, gtk, android, core |
+| [0019](./0019-editor-contract.md) | The editor contract — v5-parity editing for the output pane — folded into 0015 | withdrawn | apple, windows, gtk, android, core |
 | [0020](./0020-emoji-in-tree.md) | Emoji in the tree — a settings-gated emoji group for every alphabet | proposed | android, gtk, windows, apple, web, core |
 | [0021](./0021-control-select-subtree.md) | Control-mode Select subtree — native text selection through Dasher | implemented | core, windows, apple, gtk, android, web |
 | [0022](./0022-diagnostic-logging.md) | Diagnostic logging — shared format, verbosity gating, version-scoped rotation | active | windows, apple, gtk, android |

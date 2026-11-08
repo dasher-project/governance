@@ -4,12 +4,25 @@ title: Input & access methods (steering/selection/dwell/switch/eye-gaze/joystick
 status: active
 platforms: [apple, windows, gtk, android, core]
 created: 2026-06-28
-updated: 2026-08-01
+updated: 2026-11-08
 ---
 
 # Input & access methods (steering/selection/dwell/switch/eye-gaze/joystick)
 
-> **Status (August 2026):** the canonical model below is agreed — the nine
+## Plain-English summary
+
+Dasher is a free tool that lets people who cannot use a keyboard write, by
+zooming in on text they point to with a mouse, their eyes, or a switch. People
+steer Dasher in different ways, and they also choose how to confirm a choice:
+some press a switch, others dwell on a spot or simply keep pointing. Today each
+version of Dasher names and combines these options differently. This proposal
+fixes one shared list of control methods and one shared table of which
+combinations make sense, so the same setting means the same thing on every
+version. This matters most for people who use switches or eye control, and for
+the carers and therapists who set the tool up for them. The shared list and
+table are agreed; the detailed design for switch and eye control is still open.
+
+> **Status (August 2026):** the canonical model below is agreed: the nine
 > selection methods, the seven steering methods, and the compatibility matrix.
 > Apple and Windows were verified to match for the methods they share, so this
 > RFC is now `active`. What remains open is the switch-access design (consume the
@@ -21,12 +34,12 @@ updated: 2026-08-01
 DasherCore's selection behaviour is governed by a single engine parameter,
 `SP_INPUT_FILTER` (e.g. "Normal Control", "Click Mode", "Menu Mode", "Two Push
 Dynamic Mode"), plus a handful of bool/long params (`BP_STOP_OUTSIDE`,
-`BP_AUTOCALIBRATE`, `LP_START_MODE`, etc.). But the **user-facing concept** of an
-"access method" — *how do you steer* (pointer / touch / eye-gaze / tilt / joystick
+`BP_AUTOCALIBRATE`, `LP_START_MODE`, etc.). But the user-facing concept of an
+"access method", *how do you steer* (pointer / touch / eye-gaze / tilt / joystick
 / switches) × *how do you select* (continuous / press-to-move / click-to-zoom /
-dwell / 1-switch / 2-switch / 2-push / scanning / direct-boxes) — is a
-**frontend concern** that each platform has reinvented with different UX, a
-different data model, and different gaps. This RFC proposes a shared
+dwell / 1-switch / 2-switch / 2-push / scanning / direct-boxes), is a frontend
+concern. Each platform has reinvented it with different UX, a different data
+model, and different gaps. This RFC proposes a shared
 **access-method model** and a per-platform integration spec so that "set up your
 access method" means the same thing on Apple, Windows, GTK, and Android.
 
@@ -50,20 +63,20 @@ tracker abstraction and the switch-access design remain open.
 ## Motivation
 
 - Dasher is an assistive text-entry tool. The access-method choice is the single
-  most consequential configuration a user makes — it determines whether they can
+  most consequential configuration a user makes. It determines whether they can
   use Dasher at all with their motor abilities.
 - Today:
-  - **Apple** has the richest model (`AccessMethod` × `SelectionMethod` matrices,
+  - Apple has the richest model (`AccessMethod` × `SelectionMethod` matrices,
     `SwitchProfile`, `TiltCalibrationView`, app-level dwell with a radial
     indicator) but no joystick/gamepad implementation and a partially-stubbed
     iOS switch-capture.
-  - **Windows** has `AccessMethod` + `SelectionMethod` + native eye-gaze
+  - Windows has `AccessMethod` + `SelectionMethod` + native eye-gaze
     (WinRT) + UDP gaze + gamepad, but no switch-capture UI and no dwell
     rendering.
-  - **GTK** has none of this surfaced (hand-built 3-page Preferences window).
-  - **Android** has touch + tilt only; the Input settings tab shows raw engine
+  - GTK has none of this surfaced (hand-built 3-page Preferences window).
+  - Android has touch + tilt only; the Input settings tab shows raw engine
     parameters with no curated access-method UX.
-- The matrices on Apple and Windows already **diverge** (different method enums,
+- The matrices on Apple and Windows already diverge (different method enums,
   different compatibility rules). Without an RFC they will diverge further.
 - Eye-gaze in particular is implemented three different ways (Apple hover /
   Windows WinRT+UDP / nothing on Android) with no shared tracker abstraction or
@@ -77,7 +90,7 @@ names and must match this matrix. They were verified identical across Apple
 (`Engine/SelectionMethod.cs`, `AccessMethod.cs`) for the steering methods both
 platforms share.
 
-### Selection methods — the engine contract
+### Selection methods: the engine contract
 
 There are nine selection methods. Each maps 1:1 to an `SP_INPUT_FILTER` value in
 DasherCore, so the engine is the source of truth for this side. The mapping
@@ -96,7 +109,7 @@ reads one table, not two. (Follow-up task for the DasherCore repo.)
 | scanning | `Menu Mode` | yes | 1 |
 | directBoxes | `Direct Mode` | yes | 1 |
 
-### Steering methods — per-platform, hardware-gated
+### Steering methods: per-platform, hardware-gated
 
 Steering methods are not a shared enum. They differ by hardware, and that is
 correct. The names are shared; availability is not.
@@ -111,7 +124,7 @@ correct. The names are shared; availability is not.
 | handTracking | visionOS only | — | — | — | — |
 | switchesOnly | yes | yes | yes | — | — |
 
-### Compatibility matrix — normative
+### Compatibility matrix: normative
 
 A frontend must offer only the selection methods marked for the active steering
 method. Apple and Windows already match this matrix for the methods they share.
@@ -133,20 +146,20 @@ parts that are still open. They are not normative yet.
 
 ### Shared concepts
 
-1. **Steering method** — what produces the continuous (x, y) the engine's pointer
+1. **Steering method**: what produces the continuous (x, y) the engine's pointer
    consumes. Values: `pointer`, `touch`, `eyeGaze`, `tilt`, `joystick`,
    `handTracking`, `switchesOnly`. Platform availability varies (see table below).
-2. **Selection method** — when/how a zoom/select happens. Maps 1:1 to an
+2. **Selection method**: when/how a zoom/select happens. Maps 1:1 to an
    `SP_INPUT_FILTER` value plus zero or more engine bool/long params. Values:
    `continuous`, `pressToMove`, `clickToZoom`, `dwell`, `oneSwitch`,
    `twoSwitches`, `twoPush`, `scanning`, `directBoxes`.
-3. **Switch profile** — for switch-driven selection methods, the binding of
+3. **Switch profile**: for switch-driven selection methods, the binding of
    physical inputs (keys / Bluetooth switches / platform switch-access events)
    to DasherCore "key events" (`dasher_key_event`). Includes scan speed.
-4. **Dwell rendering** — an **app-level** affordance (not an engine concept) that
+4. **Dwell rendering**: an app-level affordance (not an engine concept) that
    shows a radial progress indicator after a configurable dwell duration and
    synthesises the select. Required on any platform offering dwell.
-5. **Compatibility matrix** — which selection methods are valid for a given
+5. **Compatibility matrix**: which selection methods are valid for a given
    steering method (e.g. `scanning` is valid for `switchesOnly` but not for
    `pointer`).
 
@@ -170,9 +183,9 @@ parts that are still open. They are not normative yet.
   1. **Platform-native eye tracker** (WinRT `GazeInputSourcePreview`; iPadOS 18
      Eye Tracking surfaced as a pointer; Android Camera Switch / future eye-track
      APIs).
-  2. **Mouse-presenting trackers** (Tobii and others that appear as a mouse) —
-     consumed via the platform pointer path, no special code.
-  3. **Network gaze (UDP)** — adopt Dasher-Windows's existing UDP protocol as the
+  2. **Mouse-presenting trackers** (Tobii and others that appear as a mouse) are
+     consumed via the platform pointer path; no special code is needed.
+  3. **Network gaze (UDP)**. Adopt Dasher-Windows's existing UDP protocol as the
      cross-platform wire format:
      - `STREAM_DATA <ts> <x> <y>` (spaces), or
      - `GazePoint X:<x> Y:<y> Timestamp:<ts>`
@@ -192,7 +205,7 @@ parts that are still open. They are not normative yet.
   - GTK: keyboard keys; evdev joysticks.
   - Android: keyboard keys; **Android Switch Access** events
     (`AccessibilityService`); Bluetooth switches via `KeyEvent`.
-- Persisted as JSON sidecar (`access.json`) per platform, **outside** the engine
+- Persisted as JSON sidecar (`access.json`) per platform, outside the engine
   parameter schema (mirrors RFC 0007's appearance-settings pattern).
 
 ### Dwell (proposal)
@@ -219,8 +232,8 @@ all four platforms adopt the same shape.
   Control on iOS, and XInput on Windows are genuinely different APIs; a shared
   *model* is achievable, a shared *implementation* is not.
 - **UX research gap.** The compatibility matrix and the access-screen IA need
-  user research with the actual target population (AAC users, clinicians) —
-  building this top-down risks the same "developer-assigned tiers" problem RFC
+  user research with the actual target population (AAC users, clinicians).
+  Building this top-down risks the same "developer-assigned tiers" problem RFC
   0006 flagged.
 
 ## Alternatives considered
@@ -262,7 +275,7 @@ all four platforms adopt the same shape.
 1. **Canonical method enums.** ~~Can Apple and Windows agree on a single shared
    list of `SteeringMethod` × `SelectionMethod` values (and a compatibility
    matrix)? If yes, does it live in DasherCore as documentation, or only in this
-   RFC?~~ **Resolved (August 2026):** yes — see the Canonical model. The nine
+   RFC?~~ **Resolved (August 2026):** yes; see the Canonical model. The nine
    selection methods are agreed, the matrix is agreed, and the selection →
    `SP_INPUT_FILTER` mapping will live in `DasherCore/docs` as the SSOT.
    Steering methods stay per-platform (hardware-gated), names shared.
@@ -277,7 +290,7 @@ all four platforms adopt the same shape.
    a reduced-capability version?
 6. **Where does the access-method state live?** **Open.** Sidecar JSON (per
    RFC 0007) vs. engine parameters (per RFC 0006).
-7. **UX research prerequisite.** **Resolved (2026-08-01) for promotion** — the
+7. **UX research prerequisite.** **Resolved (2026-08-01) for promotion**: the
    RFC moved out of `draft` once the canonical model was agreed. **Open** for the
    access-screen IA: the compatibility matrix and the access-screen layout still
    need user research with AAC users and clinicians.
@@ -294,7 +307,7 @@ all four platforms adopt the same shape.
   compatibility matrix are normative. The selection → `SP_INPUT_FILTER` mapping
   is engine-owned and moves to `DasherCore/docs`. Steering methods stay
   per-platform.
-- Open sub-questions: Q2 (switch-access design) is the main one — it blocks
+- Open sub-questions: Q2 (switch-access design) is the main one; it blocks
   deeper switch work, not the model. Q3–Q8 remain open.
 
 ## History
@@ -305,3 +318,4 @@ all four platforms adopt the same shape.
   and identical compatibility matrices for the steering methods they share. Made
   those the normative Canonical model. Resolved Q1 (the mapping lives in
   DasherCore). Q2 (switch access) remains open.
+- 2026-11-08 — plain-English summary added, prose simplified for readability, implementation status re-synced against the frontend repos.

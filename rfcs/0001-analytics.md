@@ -4,20 +4,24 @@ title: Privacy-preserving analytics and crash reporting
 status: implemented
 platforms: [apple, windows, gtk, android]
 created: 2026-06-17
-updated: 2026-10-28
+updated: 2026-11-08
 ---
 
 # Privacy-preserving analytics and crash reporting
+
+## Plain-English summary
+
+Dasher is a free tool that lets people who cannot use a keyboard write, by zooming in on text they point to with a mouse, their eyes, or a switch. The team behind it currently knows very little about how many people use it or why it sometimes stops working. This proposal adds an optional question when the app is first opened: help improve Dasher, or not now. If someone says yes, the app sends anonymous usage counts, such as which buttons are used and on which kind of device. It never sends anything a person has written, and nothing that could identify them. This is built and shipping on most platforms.
 
 ## Summary
 
 Add opt-in, anonymised analytics and crash reporting to the Dasher v6
 frontends (Apple, Windows, GTK) using a self-hosted PostHog instance. The
 goal is to understand how many people use Dasher, on which platforms, with
-which input methods and languages — and to get visibility into crashes —
-without ever collecting what users type. Collection is strictly opt-in via
-a first-run prompt, the event schema is published openly in the repo, and
-no personally identifiable information is sent.
+which input methods and languages, and to get visibility into crashes.
+This is done without ever collecting what users type. Collection is
+strictly opt-in via a first-run prompt, the event schema is published
+openly in the repo, and no personally identifiable information is sent.
 
 ## Implementation status
 
@@ -38,8 +42,8 @@ Implemented on Apple, Windows, Android, and GTK; not started on web.
 An audit of the live PostHog project found and fixed three deviations:
 
 1. **Location data was being collected (Apple and Android).** PostHog Cloud
-   enriches every event with `$geoip_*` properties — city, postal code, and
-   latitude/longitude — derived from the client IP. This happens even with the
+   enriches every event with `$geoip_*` properties (city, postal code, and
+   latitude/longitude) derived from the client IP. This happens even with the
    project's *anonymize IPs* setting enabled, and violates this RFC's
    "no location data" promise. Fixed by sending `$geoip_disable: true` on
    every event (the only Cloud-level control). Historical events already
@@ -76,33 +80,33 @@ surface, to which values).
 Two events are added to the published schema. Both fire only after the
 existing opt-in; both inherit every guarantee of this RFC.
 
-**`ui_action`** — the user activated a control in the main UI (anything
-outside the settings windows):
+**`ui_action`** fires when the user activates a control in the main UI
+(anything outside the settings windows):
 
 | Property | Type | Notes |
 | --- | --- | --- |
 | `surface` | enum | `main_toolbar`, `status_bar`, `ime_toolbar`, `ime_topbar` |
-| `action` | string | Fixed vocabulary per frontend (`new`, `open`, `save`, `pause_play`, `game_mode`, `settings`, `copy`, `paste`, `cut`, `select_all`, `share`, `emoji_toggle`, `speed_up`, `speed_down`, `layout`, `control_mode`, `turbo`, `float`, `dock`, `hide`, …) — new identifiers require a schema update. `layout` records its destination in `state` (`right`/`left`/`bottom`/`top`/`direct`); for other actions `state` remains toggle-style `on`/`off` (or `paused`/`playing` for `pause_play`) and always records the post-toggle value |
+| `action` | string | Fixed vocabulary per frontend (`new`, `open`, `save`, `pause_play`, `game_mode`, `settings`, `copy`, `paste`, `cut`, `select_all`, `share`, `emoji_toggle`, `speed_up`, `speed_down`, `layout`, `control_mode`, `turbo`, `float`, `dock`, `hide`, …). New identifiers require a schema update. `layout` records its destination in `state` (`right`/`left`/`bottom`/`top`/`direct`); for other actions `state` remains toggle-style `on`/`off` (or `paused`/`playing` for `pause_play`) and always records the post-toggle value |
 | `state` | enum, optional | For toggles: `on`/`off`, `paused`/`playing`, `text`/`emoji` |
 
-**`setting_changed`** — the user committed a settings change:
+**`setting_changed`** fires when the user commits a settings change:
 
 | Property | Type | Notes |
 | --- | --- | --- |
 | `setting_id` | string | The canonical setting identifier (the DasherCore parameter name, or the frontend's setting key, e.g. `Max Bitrate`, `output_font_size`) |
 | `value_type` | enum | `bool`, `number`, `enum`, `string` |
-| `value` | bool/number/string | **Present only for `bool`, `number`, and `enum`** values from a fixed vocabulary. OMITTED for `string` settings — free text (user file paths, custom names) is never collected |
-| `surface` | enum | Where the change was made: `settings`, `main_ui`, `ime` — a speed change from the status bar vs. the settings window answers different UX questions |
+| `value` | bool/number/string | **Present only for `bool`, `number`, and `enum`** values from a fixed vocabulary. OMITTED for `string` settings: free text (user file paths, custom names) is never collected |
+| `surface` | enum | Where the change was made: `settings`, `main_ui`, `ime`. A speed change from the status bar vs. the settings window answers different UX questions |
 
 **Privacy rules (additions to "explicitly NOT collected"):**
 
-- Setting **values for free-text/string settings** — only the fact that the
+- Setting **values for free-text/string settings**: only the fact that the
   setting changed (`value_type: "string"`, no `value`).
 - File paths of any kind (the PII scrubbers already strip these from crash
   traces; UI telemetry must not introduce them).
 
 Programmatic changes (engine init, defaults applied on startup, palette
-derivation) are NOT user actions and must not emit `setting_changed` —
+derivation) are NOT user actions and must not emit `setting_changed`;
 instrumentation belongs at the widget/control commit site, not inside the
 engine bridge. Derived frontend counters (e.g. `ime_always_docked_changed`)
 that predate this amendment remain valid; new instrumentation uses
@@ -112,10 +116,11 @@ that predate this amendment remain valid; new instrumentation uses
 
 | Platform | State |
 | --- | --- |
-| Dasher-Android | Implemented (main toolbar, status-bar speed, IME toolbars; every Settings commit through the parameter rows and the app-level settings) |
-| Dasher-GTK | Implemented (header-bar buttons; every Synced* settings widget) |
-| Dasher-Apple | Implemented (PR dasher-project/Dasher-Apple#55: main toolbars incl. the iPhone Duo vertical rail, status bars, output-pane toolbars, direct-mode mini-bar; every Settings parameter row plus app-level rows. Keyboard-extension IME surfaces are a follow-up — the iOS keyboard cannot link the analytics module.) |
-| Dasher-Windows, dasher-web | Not started |
+| Dasher-Android | Implemented (PR dasher-project/Dasher-Android#79: main toolbar, status-bar speed, IME toolbars; every Settings commit through the parameter rows and the app-level settings) |
+| Dasher-GTK | Implemented (PR dasher-project/Dasher-GTK#94: header-bar buttons; every Synced* settings widget) |
+| Dasher-Apple | Implemented (PR dasher-project/Dasher-Apple#55: main toolbars incl. the iPhone Duo vertical rail, status bars, output-pane toolbars, direct-mode mini-bar; every Settings parameter row plus app-level rows. Keyboard-extension IME surfaces are a follow-up; the iOS keyboard cannot link the analytics module.) |
+| Dasher-Windows | Implemented (shipped with the November 2026 schema-sync work) |
+| dasher-web | Not started |
 
 ## Motivation
 
@@ -146,7 +151,7 @@ and provides:
 - **Event analytics** (DAU/MAU, funnels, trends)
 - **Crash reporting** (exception tracking with stack traces)
 - **Feature flags** (gradual rollouts without app store releases)
-- **Session replay** (DISABLED by default — not appropriate for an
+- **Session replay** (DISABLED by default; not appropriate for an
   assistive text-entry tool)
 
 The PostHog instance would be self-hosted on infrastructure controlled by
@@ -176,7 +181,7 @@ project's control.
 
 All events are defined in a JSON or YAML schema file committed to the repo
 (`analytics-events.json` or similar). The schema is the single source of
-truth — if it's not in the schema, it's not collected.
+truth: if it's not in the schema, it's not collected.
 
 **Proposed events (v1):**
 
@@ -214,7 +219,7 @@ truth — if it's not in the schema, it's not collected.
 - Events are queued locally (SQLite or plist) when offline.
 - Sent in batch on next launch.
 - Queue is capped at 500 events; oldest dropped if exceeded.
-- No UX impact — all network happens on a background thread/process.
+- No UX impact: all network happens on a background thread/process.
 
 ### Privacy policy
 
@@ -311,7 +316,7 @@ Rely on OS-level telemetry (Windows Diagnostic Data, macOS analytics).
 - **Homebrew** uses anonymous analytics via a simple ping system.
   [Details](https://docs.brew.sh/Analytics).
 - **Audacity** faced significant community backlash when adding
-  telemetry without sufficient transparency — a cautionary tale.
+  telemetry without sufficient transparency, a cautionary tale.
 - **Dasher v5**: no telemetry at all. This is the baseline we are
   improving on.
 
@@ -340,3 +345,7 @@ Rely on OS-level telemetry (Windows Diagnostic Data, macOS analytics).
   Dasher-Windows. GTK, Android, and web have not started. Crashes fold into the
   same opt-in via [RFC 0009](./0009-crash-reporting.md).
 - Open sub-questions: Q2 (confirm the configured retention period).
+
+## History
+
+- 2026-11-08 — plain-English summary added, prose simplified for readability, implementation status re-synced against the frontend repos.

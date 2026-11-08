@@ -4,18 +4,31 @@ title: Keyboard extension / IME onboarding (Apple & Android)
 status: proposed
 platforms: [apple, android, core]
 created: 2026-06-28
-updated: 2026-08-01
+updated: 2026-11-08
 ---
 
 # Keyboard extension / IME onboarding (Apple & Android)
 
+## Plain-English summary
+
+Dasher is a free tool that lets people who cannot use a keyboard write, by
+zooming in on text they point to with a mouse, their eyes, or a switch. As
+well as a standalone app, Dasher can work as the keyboard for the whole
+device, so people can write in any program. Turning that on is not simple:
+the user must find their way through several settings screens to switch the
+keyboard on and choose it, and many people get lost along the way. This
+proposal adds a short guided walkthrough that checks whether the Dasher
+keyboard is switched on and takes the user to the right settings screen. It
+would help new users on Apple and Android devices get writing without giving
+up. This is still at the ideas stage.
+
 ## Summary
 
-Dasher ships as both a standalone writing app **and** a system keyboard:
+Dasher ships as both a standalone writing app and a system keyboard:
 on Apple platforms an iOS custom keyboard extension (`NSExtensionPointIdentifier
 com.apple.keyboard-service`), and on Android an Input Method Editor
-(`InputMethodService`, `BIND_INPUT_METHOD`). Installing the app is not enough —
-the user must explicitly **enable** the keyboard in OS settings and then **select**
+(`InputMethodService`, `BIND_INPUT_METHOD`). Installing the app is not enough.
+The user must explicitly **enable** the keyboard in OS settings and then **select**
 it as the active input source. This is a multi-step system-settings dance that
 first-time users routinely fail at, and it is the single largest source of
 "the keyboard doesn't work" support requests.
@@ -53,7 +66,7 @@ built on either platform.
   callbacks are unavailable.
 - The state is also **opaque**: the app cannot silently know whether the user
   completed the steps. Both platforms expose APIs to query it, but neither
-  frontend currently does — there is no in-app guidance, no "you're nearly there",
+  frontend currently does: there is no in-app guidance, no "you're nearly there",
   no re-prompt after the user returns from system settings.
 - This is platform-specific plumbing that does not belong in DasherCore (the
   engine), but the **detection queries and the step model** are shared enough
@@ -90,10 +103,10 @@ Detection must be **cheap and side-effect free** (called in `onResume` /
 
 - **Enabled?** The IME's component name (`ComponentName(this, DasherImeService::class.java)`,
   flattened) appears in `Settings.Secure.getString(
-  ENABLED_INPUT_METHODS)` — a colon-separated list of enabled IMEs.
+  ENABLED_INPUT_METHODS)`, a colon-separated list of enabled IMEs.
 - **Default?** On Android 11+, `imm.getEnabledInputMethodList()` plus the
   default-IME intent resolution. There is no fully public "current default IME"
-  API before Android 14; the pragmatic check is whether Dasher's IME is enabled
+  API before Android 14. The pragmatic check is whether Dasher's IME is enabled
   *and* the user has only one IME enabled, or whether the system's
   `Settings.Secure.DEFAULT_INPUT_METHOD` value equals the Dasher IME component.
   Fall back to "enabledNotDefault" if ambiguous.
@@ -119,12 +132,12 @@ Detection must be **cheap and side-effect free** (called in `onResume` /
 2. The user is sent to system settings; the app goes to the background.
 3. On `onResume`, re-detect. If `ready`, celebrate and dismiss. If still
    `notEnabled`/`enabledNotDefault`, show a persistent, dismissible banner
-   ("Almost there — select Dasher as your keyboard") with a **"Open settings"**
+   ("Almost there: select Dasher as your keyboard") with a **"Open settings"**
    button.
 4. A "Keyboard setup" entry in Settings → re-runs the flow.
 
 The IME service itself does **not** run onboarding (it is the wrong process and
-may not exist yet); the main app drives the flow and shares the persisted
+may not exist yet). The main app drives the flow and shares the persisted
 onboarding flag via the app's `filesDir` (which, per RFC 0007 and the existing
 shared-data pattern, is the same path the IME reads at its engine creation).
 
@@ -133,7 +146,7 @@ shared-data pattern, is the same path the IME reads at its engine creation).
 **Detection.**
 
 - **Enabled?** `UIApplication.openSettingsURLString` does not expose keyboard
-  state directly; the pragmatic approach is to attempt to detect via
+  state directly. The pragmatic approach is to attempt to detect via
   `UIInputViewController.hasFullAccess` (only valid inside the extension) plus a
   heartbeat: the extension writes a flag into the **App Group container**
   (`group.at.dasher.Dasher`) the first time it is loaded by the system (i.e. the
@@ -165,7 +178,7 @@ and, for Full Access, "tap Dasher → turn on Allow Full Access."
 All onboarding copy goes through the RFC 0003 i18n pipeline (engine
 `strings_*.json` for any engine-side strings; platform-native catalogs for the
 chrome). The "Allow Full Access" / "Input permission" explanations in particular
-must be plain-language and localised — they are the scariest step.
+must be plain-language and localised: they are the scariest step.
 
 ### What does NOT belong here
 
@@ -200,8 +213,8 @@ must be plain-language and localised — they are the scariest step.
 ## Prior art
 
 - **Gboard / SwiftKey** both ship a guided "Enable keyboard" first-run flow on
-  Android with the exact deep-links above and a returning-user banner — the de
-  facto user expectation.
+  Android with the exact deep-links above and a returning-user banner. This is
+  the de facto user expectation.
 - **Fleksy / Grammar Keyboard** on iOS use the step-copy + `openSettingsURLString`
   pattern.
 - **Dasher v5** had no keyboard extension; this is a new concern for v6.
@@ -220,9 +233,13 @@ must be plain-language and localised — they are the scariest step.
 
 ## Resolution
 
-- State: pending — open for discussion
+- State: pending (open for discussion)
 - Decided by: —
 - Date: —
 - Decision: Not yet accepted. No frontend ships the keyboard-enablement flow on
   Apple or Android.
 - Open sub-questions: all (see Unresolved questions).
+
+## History
+
+- 2026-11-08 — plain-English summary added, prose simplified for readability, implementation status re-synced against the frontend repos.

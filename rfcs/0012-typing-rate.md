@@ -4,38 +4,50 @@ title: Typing rate (CPS / WPM) display
 status: implemented
 platforms: [apple, windows, gtk, android, core]
 created: 2026-07-18
-updated: 2026-10-30
+updated: 2026-11-08
 ---
 
 # Typing rate (CPS / WPM) display
 
+## Plain-English summary
+
+Dasher is a free tool that lets people who cannot use a keyboard write, by
+zooming in on text they point to with a mouse, their eyes, or a switch. Users,
+therapists, and researchers often want to know one number above all: how fast a
+person can write with it. This proposal adds a live speed display, shown in
+characters per second and words per minute, so the person writing can watch
+their pace as they go. The speed is calculated in one shared place, so every
+version of Dasher shows the same figure. It stays off by default during
+everyday writing and is always shown in the practice game. The display is now
+built and in use across the platforms.
+
 ## Summary
 
-Show the user's typing speed — **characters per second (CPS)** and **words per
-minute (WPM)** — live, over a short rolling window so it is responsive but
-stable. Always visible in **game mode**; **opt-in** during regular use via a
-Settings toggle. Computed **engine-side** (DasherCore) and exposed through the
+Show the user's typing speed live, in **characters per second (CPS)** and
+**words per minute (WPM)**, over a short rolling window so it is responsive but
+stable. Always visible in game mode; opt-in during regular use via a
+Settings toggle. Computed engine-side (DasherCore) and exposed through the
 C API so every frontend displays the same number.
 
 ## Implementation status
 
-Audited August 2026. The engine layer is done. DasherCore exposes
-`dasher_get_wpm` and `dasher_get_cps` (WPM = CPS × 12).
+Audited August 2026; GTK row updated November 2026. The engine layer is done.
+DasherCore exposes `dasher_get_wpm` and `dasher_get_cps` (WPM = CPS × 12).
 
 | Platform | State | Notes |
 | --- | --- | --- |
 | Dasher-Apple (iOS, macOS) | Implemented | Live WPM, max, and average in the canvas overlay and in game mode; a Settings toggle (`showTypingRate`). CPS is not shown; only WPM. |
 | dasher-web | Implemented | Own JS engine; live WPM, peak WPM, and accuracy. Does not consume the DasherCore C API. |
 | Dasher-Windows | Implemented | Status-bar WPM/max/avg (Settings → Output, `ShowTypingRate`); live WPM in the Direct Mode mini-bar (compact form). |
-| Dasher-GTK | Partial | Settings → Output readout (live CPS/WPM, 2 Hz, #35/#39); the keyboard-mode surface shows nothing (see the direct-entry clause). |
-| Dasher-Mobile (Android) | Implemented | Main-app status-bar readout (live CPS+WPM) and — from the 2026-10-30 amendment — the IME top bar's compact WPM; both opt-in via Settings → Output. |
+| Dasher-GTK | Implemented | Settings → Output readout (#35/#39) and compact live WPM in the keyboard-mode mini-bar (#104, November 2026). |
+| Dasher-Mobile (Android) | Implemented | Main-app status-bar readout (live CPS+WPM) and, from the 2026-10-30 amendment, the IME top bar's compact WPM; both opt-in via Settings → Output. |
 
 ## Motivation
 
-- Typing rate is *the* headline Dasher outcome metric — valued by AAC/AT users,
+- Typing rate is *the* headline Dasher outcome metric, valued by AAC/AT users,
   therapists, and researchers. Today it is invisible during normal use.
 - Game mode already tracks per-sentence chars/sec internally (`CGameModule`:
-  `m_uiTotalSyms / m_ulTotalTime`) — but only prints it in a log line at phrase
+  `m_uiTotalSyms / m_ulTotalTime`) but only prints it in a log line at phrase
   end, never live.
 - The metric should be consistent across all frontends (the project's stated
   cross-platform parity goal).
@@ -44,10 +56,10 @@ Audited August 2026. The engine layer is done. DasherCore exposes
 
 ### Metric definitions
 
-- **CPS** = output characters **produced** per second over the rolling window.
+- **CPS** = output characters produced per second over the rolling window.
   "Produced" = a character inserted into the output buffer (a text-output
-  event). Deletions are **not** counted (they are editing, not production) —
-  this is "characters typed" in the productive-throughput sense.
+  event). Deletions are not counted (they are editing, not production). This is
+  "characters typed" in the productive-throughput sense.
 - **WPM** = `CPS × 12`. Standard convention: 1 word = 5 characters, 60 s/min →
   `CPS × 60 / 5 = CPS × 12`.
 - **Gross** for v1 (all produced characters: letters, spaces, punctuation).
@@ -55,14 +67,14 @@ Audited August 2026. The engine layer is done. DasherCore exposes
 
 ### Rolling window
 
-- Window = the last **5 seconds** of output events (timestamped char counts).
-- **Pause handling:** if no output occurs for **> 2 s**, the window freezes
+- Window = the last 5 seconds of output events (timestamped char counts).
+- **Pause handling:** if no output occurs for > 2 s, the window freezes
   (keeps displaying the last rate) and a fresh window begins on the next
   character. Idle time never drags the rate toward zero while the user pauses
   intentionally.
 - Updated each frame inside `dasher_frame` (which already receives `time_ms`).
 
-### Data source — engine-side C API (recommended)
+### Data source: engine-side C API (recommended)
 
 DasherCore owns the authoritative output character count (it emits the output
 events and tracks the offset). Add a small typing-rate tracker that observes
@@ -75,7 +87,7 @@ DASHER_API double dasher_get_cps(dasher_ctx* ctx);
 DASHER_API double dasher_get_wpm(dasher_ctx* ctx);
 ```
 
-Game mode reuses this for the **live** rate; the existing cumulative
+Game mode reuses this for the live rate; the existing cumulative
 `CGameModule` stats (total time / syms / nats shown at phrase end) remain
 unchanged.
 
@@ -90,34 +102,35 @@ Cost: a DasherCore addition + submodule bump.
   (next to the existing `correct / target` display). Throttle UI updates to
   ~2 Hz (not every frame) so the number doesn't churn.
 - **Regular use (opt-in):** a new boolean setting `BP_SHOW_TYPING_RATE`
-  (group: "Output", or a small "Statistics" group — per RFC 0006 IA). When on,
-  a small CPS/WPM badge in the toolbar or a canvas corner. **Off by default**
+  (group: "Output", or a small "Statistics" group per RFC 0006 IA). When on,
+  a small CPS/WPM badge in the toolbar or a canvas corner. Off by default
   so it doesn't clutter the main writing view.
 - **Direct-entry mode (opt-in, same setting):** frontends that hide their
   normal chrome in direct-entry mode (Windows' mini-bar, Apple's floating
   window) show a **compact live-WPM** element in the mode's control strip
-  when the typing-rate toggle is on. Compact = current rate only (no max/avg)
-  — the strip has no room for more, and the audience for this surface
+  when the typing-rate toggle is on. Compact = current rate only (no max/avg).
+  The strip has no room for more, and the audience for this surface
   (therapist/user live feedback) needs the current number. Added August 2026
   after a Windows user request.
 
   **2026-10-30 amendment:** the Android IME exemption ("no persistent
-  strip; revisit with RFC 0008 flows") is **lifted** — the IME now has a
+  strip; revisit with RFC 0008 flows") is lifted: the IME now has a
   stable top bar (float/dock, emoji, hide), which IS the mode's control
   strip. Android shows the compact live-WPM there under the same toggle
-  (Settings → Output). GTK's keyboard-mode mini-bar remains an open gap.
+  (Settings → Output). GTK's keyboard-mode mini-bar gap was closed by
+  Dasher-GTK #104 in November 2026.
 - Format e.g. `4.2 cps · 50 wpm`; labels localised per RFC 0003.
 
 ### Privacy
 
-CPS/WPM are derived from **character count + time only** — never the typed
+CPS/WPM are derived from character count + time only, never the typed
 content. Safe to display locally. An aggregate (e.g. session-average WPM) could
 be sent to PostHog later as a non-content property; out of scope for v1.
 
 ## Drawbacks
 
 - Adds engine state + a small C API surface (vs a pure-frontend computation).
-- The window (5 s) and pause threshold (2 s) are judgement calls — tunable.
+- The window (5 s) and pause threshold (2 s) are judgement calls and are tunable.
 - Gross WPM ignores accuracy; users comparing to "net WPM" tests may see higher
   numbers (Dasher's predictive output also has fewer deletes than typing tests).
 
@@ -135,7 +148,7 @@ be sent to PostHog later as a non-content property; out of scope for v1.
 ## Prior art
 
 - Standard typing-test WPM (5-character-word convention).
-- Dasher's own `CGameModule` cumulative chars/sec and nats/sec — the precedent
+- Dasher's own `CGameModule` cumulative chars/sec and nats/sec, the precedent
   this generalises to a live, everywhere-available metric.
 - AAC/AT research, where cps and wpm are the primary throughput measures.
 
@@ -160,14 +173,14 @@ Per [RFC 0011](./0011-testing.md):
 
 ## Unresolved questions
 
-1. **Window length / pause threshold** — 5 s / 2 s proposed. **Resolved
+1. **Window length / pause threshold**: 5 s / 2 s proposed. **Resolved
    (2026-08-01).** Shipped in the engine as a 5 s window with a 2 s pause freeze.
-2. **Where the regular-use toggle lives** — "Output" group or a new "Statistics"
+2. **Where the regular-use toggle lives**: "Output" group or a new "Statistics"
    group? **Resolved (2026-08-01).** Apple ships a Settings toggle
    (`showTypingRate`) in the Output/statistics area.
-3. **Net vs gross WPM** — ship gross first? **Resolved (2026-08-01).** Yes; gross
+3. **Net vs gross WPM**: ship gross first? **Resolved (2026-08-01).** Yes; gross
    for v1, net (error-adjusted) is a future option.
-4. **PostHog aggregate** — send session-average WPM as an analytics property?
+4. **PostHog aggregate**: send session-average WPM as an analytics property?
    **Open.** Not sent today; privacy-safe, non-content.
 
 ## Resolution
@@ -184,3 +197,4 @@ Per [RFC 0011](./0011-testing.md):
 - 2026-07-18 — initial proposal.
 - 2026-08-01 — implemented (engine API + Apple/web); window/pause/toggle decisions recorded above.
 - 2026-08-26 — direct-entry-mode clause added (compact live WPM in the Direct Mode control strip, same opt-in setting; Windows user request); Windows status row updated to Implemented (status-bar + mini-bar).
+- 2026-11-08 — plain-English summary added, prose simplified for readability, implementation status re-synced against the frontend repos.

@@ -4,17 +4,21 @@ title: Report the app version in Settings (Privacy tab for now)
 status: active
 platforms: [apple, windows, gtk, android, web]
 created: 2026-08-22
-updated: 2026-08-22
+updated: 2026-11-08
 ---
 
 # Report the app version in Settings (Privacy tab for now)
+
+## Plain-English summary
+
+Dasher is a free tool that lets people who cannot use a keyboard write by zooming in on text they point to with a mouse, their eyes, or a switch. This proposal puts a small line into each app's settings screen showing which version of the app is running. When someone reports a problem, the team can ask "which version do you have?" and the answer is right there in the app. This especially helps people who installed Dasher outside an app store and may not know which copy they have. The line sits at the bottom of the privacy part of settings for now, and every platform now shows it.
 
 ## Summary
 
 Every Dasher v6 frontend displays its **application version** in its settings
 UI so a user can say exactly which build they are running. Until a dedicated
 About section exists (see RFC 0006), the version line lives at the bottom of
-the existing **Privacy** tab — the tab every frontend already ships for the
+the existing **Privacy** tab, the tab every frontend already ships for the
 analytics opt-in.
 
 ## Implementation status
@@ -23,16 +27,16 @@ analytics opt-in.
 | --- | --- | --- |
 | Dasher-GTK | Implemented | `Preferences → Privacy`, `DASHER_GTK_VERSION` compile definition (same source analytics already uses). |
 | Dasher-Android | Implemented | `Settings → Privacy`, `BuildConfig.VERSION_NAME` (same source analytics already uses). |
-| Dasher-Windows | Implemented | `Settings → Privacy`, bottom line; `UpdateChecker.GetCurrentVersion()` — the same source analytics and update checks already use. |
-| Dasher-Apple | Issue filed | Version exists in analytics; needs the Settings row (macOS/iOS/visionOS). |
-| dasher-web | Issue filed | Needs the row in its settings surface. |
+| Dasher-Windows | Implemented | `Settings → Privacy`, bottom line; `UpdateChecker.GetCurrentVersion()`, the same source analytics and update checks already use. |
+| Dasher-Apple | Implemented (Settings → Privacy row; Dasher-Apple #37) | Version exists in analytics (macOS/iOS/visionOS). |
+| dasher-web | Implemented (playground Settings → Privacy version row, August 2026) | Row in the playground's settings surface. |
 
 ## Motivation
 
 User reports arrive without build information. In August 2026 a Windows user
 emailed feedback about "the new build"; correlating her two reports with the
 release list required guessing between v0.1.14 and v0.1.15 (the answer changed
-the diagnosis — the versions were functionally identical, which ruled out a
+the diagnosis: the versions were functionally identical, which ruled out a
 regression). Every support conversation starts better with "what version are
 you on?" answerable from the app itself, and users on packaged installs
 (Flatpak, AppImage, store builds, self-builds) frequently do not know.
@@ -46,7 +50,7 @@ human.
 
 - **Content:** one plain, non-interactive line at the bottom of the Privacy
   tab, e.g. `Dasher 0.2.2` (GTK), `Dasher 0.1.0` (Android). The frontend's
-  user-facing name plus its version string — nothing else.
+  user-facing name plus its version string, and nothing else.
 - **Source of truth:** the same version identifier the frontend already
   reports elsewhere, so the UI can never disagree with analytics or crash
   reports:
@@ -55,10 +59,10 @@ human.
   - Android: `BuildConfig.VERSION_NAME` (consumed by `AnalyticsService`).
   - Windows: the assembly/package version used by the updater.
   - Apple: `CFBundleShortVersionString` / the value the analytics layer sends.
-- **Placement for now:** bottom of the Privacy tab — it exists on every
+- **Placement for now:** the bottom of the Privacy tab. It exists on every
   frontend already (analytics opt-in), needs no new navigation, and the
   version is arguably relevant there ("what did I consent to, on what
-  build?"). This is explicitly **interim**: when RFC 0006's About section
+  build?"). This is explicitly interim: when RFC 0006's About section
   lands, the line moves there and this RFC's placement clause is retired (edit
   in place per the RFC-editing rules).
 - **Not in scope:** engine (DasherCore) version display. Frontends pin
@@ -79,7 +83,7 @@ human.
   territory (settings IA) and shouldn't block the immediate support need.
 - **Window title / menu only.** Not discoverable on mobile/keyboard
   extensions, and window chrome is absent in IME contexts.
-- **Nowhere — rely on the store/package manager.** Fails exactly when we need
+- **Nowhere (rely on the store/package manager).** Fails exactly when we need
   it: Flatpak/AppImage side-by-side installs, self-builds, APKs shared
   directly with testers.
 
@@ -89,15 +93,15 @@ human.
   question of web support for decades.
 - Android system settings "App info" (not reachable enough from inside an
   app's own support flow).
-- v5 showed version in its about dialogue — parity restoration, not a new
-  concept for Dasher.
+- v5 showed version in its about dialogue. This is parity restoration, not a
+  new concept for Dasher.
 
 ## Testing
 
 Per [RFC 0011](./0011-testing.md): manual verification only. Each frontend's
 PR confirms visually that (a) the shown string equals the version the
 frontend reports in its analytics events (GTK/Android implementations assert
-this by construction — both read the same constant), and (b) the line appears
+this by construction: both read the same constant), and (b) the line appears
 on the Privacy tab. No automated test: the value is a build constant and the
 assertion would restate the code.
 
@@ -106,9 +110,12 @@ assertion would restate the code.
 1. **Engine (DasherCore) version alongside the app version.** Useful for
    support ("jumbling" reports needed the submodule pin to diagnose) but
    requires a `dasher_get_version()` C API + per-release tagging discipline
-   in every frontend's bump commits. **Open** — propose alongside RFC 0006's
-   About section.
-2. **Build metadata** (commit, channel) beyond the plain version. **Open** —
+   in every frontend's bump commits. **Open**: propose alongside RFC 0006's
+   About section. **Update (2026-11-08):** unblocked — DasherCore now exposes
+   the engine version (`dasher_get_engine_version`, landed November 2026 as
+   part of RFC 0023 item 4), so the engine version can join the About section
+   when RFC 0006 lands it.
+2. **Build metadata** (commit, channel) beyond the plain version. **Open**:
    lean no for now; release builds are the support surface.
 
 ## Resolution
@@ -126,3 +133,4 @@ assertion would restate the code.
 
 - _2026-08-22_ — _(initial proposal; accepted directly, GTK and Android implemented immediately, issues filed for the remaining frontends)_
 - _2026-08-24_ — _(Windows implemented — version line at the bottom of Settings → Privacy, closing [Dasher-Windows #29](https://github.com/dasher-project/Dasher-Windows/issues/29))_
+- 2026-11-08 — plain-English summary added, prose simplified for readability, implementation status re-synced against the frontend repos.

@@ -4,10 +4,23 @@ title: Dark mode support via appearance-aware colour palettes
 status: implemented
 platforms: [apple, windows, gtk, android, web, core]
 created: 2026-06-19
-updated: 2026-08-01
+updated: 2026-11-08
 ---
 
 # Dark mode support via appearance-aware colour palettes
+
+## Plain-English summary
+
+Dasher is a free tool that lets people who cannot use a keyboard write, by
+zooming in on text they point to with a mouse, their eyes, or a switch.
+Computers and phones can switch their whole display to a dark appearance, and
+many people prefer it that way. Before this change, Dasher ignored that
+setting and always drew its writing area for light backgrounds, which glared
+next to a dark screen. This proposal gave each of Dasher's light colour
+schemes a matched dark partner, and Dasher now swaps between the two
+automatically when the device changes appearance. It helps anyone who uses
+dark mode, including people who find bright screens uncomfortable. The work
+is built and shipping on most platforms.
 
 ## Summary
 
@@ -33,14 +46,16 @@ companion lookup. Eight dark companion palettes ship.
 | Dasher-Windows | Implemented | Implemented (theme dictionaries) |
 | Dasher-GTK | Partial (the palette chooser follows the engine) | Not implemented (the window chrome does not follow the OS) |
 | Dasher-Mobile (Android) | Partial | Partial (the system chrome follows; the custom UI hardcodes light colours) |
-| dasher-web | Not started | Not started |
+| dasher-web | Implemented (playground bundles the eight dark companions plus a Web Demo Dark palette) | Implemented (follows the operating system light/dark setting) |
+
+*Re-synced 2026-11-08: dasher-web has since implemented both layers; GTK and Android remain Partial.*
 
 ## Motivation
 
 Every platform Dasher targets (Apple, Windows, Android, modern GTK,
 the web) ships a system-wide light/dark appearance that users expect
-applications to follow. Today DasherCore has **no concept of
-appearance**:
+applications to follow. Today DasherCore has no concept of
+appearance:
 
 - A search for `dark`, `appearance`, `userInterfaceStyle`,
   `traitCollection`, or `systemColor` in `DasherCore/src` returns
@@ -55,9 +70,9 @@ and drifts easily.
 
 The Dasher zooming canvas makes this more than a chrome concern:
 node fills, label colours, and outlines all come from the active
-palette, and a light palette rendered on a dark host window (or vice
+palette. A light palette rendered on a dark host window (or vice
 versa) produces unreadable text and jarring borders. We need the
-palette — not the frontend — to own the dark variant, so the canvas
+palette, not the frontend, to own the dark variant, so the canvas
 stays legible in either appearance.
 
 ## Detailed design
@@ -67,12 +82,12 @@ stays legible in either appearance.
 DasherCore already has everything required to *render* a dark theme. Two
 things were missing, both addressed by this RFC:
 
-1. **A convention for pairing palettes** — the `appearance`/`companion`
+1. **A convention for pairing palettes**: the `appearance`/`companion`
    metadata and the eight dark companions (sections below).
 2. **Appearance *state* owned by the engine boundary**, so a frontend can say
    "follow the system" or "force dark" and have DasherCore resolve the right
-   palette — without each frontend reimplementing the mode toggle, the
-   companion lookup, or the light/dark preference storage.
+   palette (without each frontend reimplementing the mode toggle, the
+   companion lookup, or the light/dark preference storage).
 
 The appearance model lives at the **C API layer** (in `dasher_ctx`), not in
 the DasherCore engine `Parameters` system. Appearance mode and palette
@@ -82,13 +97,13 @@ manifest, or the generic settings UI that every frontend renders. The model
 persists via a small `appearance_settings.json` sidecar alongside
 `dasher_settings.xml`.
 
-A stateful model is required (rather than the originally-proposed stateless
-"switch to my companion" call) because the stateless version has a
+A stateful model is required rather than the originally-proposed stateless
+"switch to my companion" call. The stateless version has a
 **persistence bug**: it wrote the auto-resolved palette to the persistent
 `SP_COLOUR_ID` parameter, silently overwriting the user's explicit choice on
 every appearance change, so the original choice was lost across restarts.
 Storing the user's light/dark preferences as the source of truth and deriving
-the active palette from them fixes this — the preference can never be
+the active palette from them fixes this: the preference can never be
 clobbered by an auto-switch.
 
 ### Palette metadata (XML schema)
@@ -125,8 +140,8 @@ Example (a new file `colour.rainbow.dark.xml`):
 The dark palette inherits all of Rainbow's letter/group colours through
 `parentName` (group colours already walk the parent chain in
 `ColorPalette::GetNodeColor`/`GetGroupColor`) and overrides only the
-~10 chrome colours plus the label/outline defaults. The letter fills —
-the palette's visual identity — stay identical, which is the desired
+~10 chrome colours plus the label/outline defaults. The letter fills (the
+palette's visual identity) stay identical, which is the desired
 behaviour: a user who chose "Rainbow" should see Rainbow's letters in
 both appearances, only the canvas chrome flips.
 
@@ -151,23 +166,23 @@ light palettes:
 Three bundled palettes are already dark and need no companion (and at most
 minimal tweaks later): **Yellow on Blue**, **Yellow on Black**, and **Blue on
 Dark Green**. They carry no companion metadata; a user may select one directly
-as their dark preference and it is honoured as-is — they are already
+as their dark preference and it is honoured as-is. They are already
 appropriate for dark mode.
 
 Each companion inherits its parent's node/group fills (the palette's visual
 identity) and overrides only:
 
-- `backgroundColor` — the primary fix, flipped to a dark neutral (`#1E1E1E`);
-- `defaultLabelColor` / `defaultOutlineColor` — flipped to white / a subtle
+- `backgroundColor`: the primary fix, flipped to a dark neutral (`#1E1E1E`);
+- `defaultLabelColor` / `defaultOutlineColor`: flipped to white / a subtle
   dark outline so any labels or outlines drawn on the background are legible;
-- the chrome that sits on the background — crosshair, input line/position,
+- the chrome that sits on the background: crosshair, input line/position,
   root/control node, selection, circle markers, start boxes, two-push guides,
   info/warning text and backgrounds, game guide.
 
 The dark companions define no `<groupColorInfo>` of their own, so every node
 colour lookup falls through to the parent. To support this, `ColorPalette::
 GetUIPreviewColors()` now inherits the parent's preview colours when a palette
-has none of its own, so the picker shows the parent's representative colours
+has none of its own. The picker then shows the parent's representative colours
 for a dark companion (e.g. "Default Dark" shows Default's swatches).
 
 ### Legacy palettes
@@ -186,7 +201,7 @@ sufficient to link a pair.
 The model exposes an **appearance mode** (`SYSTEM` / `LIGHT` / `DARK`), a
 transient **system appearance** input (what the OS reports, consulted only in
 `SYSTEM` mode), and **two persisted palette preferences** (light and dark), so
-a user may freely mix — e.g. Rainbow for light and TurboLUT Dark for dark.
+a user may freely mix (e.g. Rainbow for light and TurboLUT Dark for dark).
 The dark preference defaults to the light preference's companion.
 
 ```c
@@ -213,7 +228,7 @@ DASHER_API void        dasher_set_dark_palette(dasher_ctx* ctx, const char* name
 DASHER_API void dasher_set_user_palette(dasher_ctx* ctx, const char* name);
 ```
 
-The metadata helpers from the original proposal are retained — they are not
+The metadata helpers from the original proposal are retained. They are not
 made redundant by the stateful model, since the dark preference still needs a
 sensible default and the picker still wants to group palettes:
 
@@ -241,8 +256,8 @@ discouraged.
 
 **Persistence.** `mode`, `light_palette`, and `dark_palette` are stored in
 `<user_dir>/appearance_settings.json`, written on every change and reloaded
-(and re-resolved) at `dasher_create`. Because the preferences — not the
-transient active palette — are persisted, an auto-switch can never overwrite
+(and re-resolved) at `dasher_create`. Because the preferences (not the
+transient active palette) are persisted, an auto-switch can never overwrite
 the user's explicit choice across restarts.
 
 ### Frontend integration
@@ -254,7 +269,7 @@ the user's explicit choice across restarts.
 2. On change, call `dasher_set_system_appearance(ctx, LIGHT or DARK)`. If
    `mode == SYSTEM`, DasherCore resolves and switches automatically.
 3. Expose a **System / Light / Dark** control in the settings UI via
-   `dasher_get/set_appearance_mode` — no per-frontend mode-toggle logic.
+   `dasher_get/set_appearance_mode`: no per-frontend mode-toggle logic.
 4. The palette picker sets preferences via `dasher_set_user_palette` (or the
    explicit `set_light_palette` / `set_dark_palette` if it offers separate
    pickers), and can use `dasher_get_palette_appearance` to group the list.
@@ -286,7 +301,7 @@ the user's explicit choice across restarts.
   deliberate (appearance is a shell concern) but means the model persists via a
   sidecar file rather than `dasher_settings.xml`, and is not exposed through
   the generic parameter-introspection API. Frontends that auto-build settings
-  from the parameter schema will not see appearance controls there — they use
+  from the parameter schema will not see appearance controls there: they use
   the dedicated `dasher_get/set_appearance_*` functions.
 - **Authoring burden.** A genuinely good dark variant of each palette requires
   hand-tuning chrome colours. This RFC ships chrome-only dark companions for
@@ -314,7 +329,7 @@ A single `dasher_set_appearance(ctx, light|dark)` that flips to the current
 palette's companion. **Rejected after review** because it (1) provides no
 System/Light/Dark mode, forcing every frontend to reinvent the mode toggle; (2)
 locks the user into 1:1 pairings (Rainbow light ⟺ Rainbow Dark, no mixing); and
-(3) has a **persistence bug** — it wrote the auto-resolved palette to the
+(3) has a persistence bug: it wrote the auto-resolved palette to the
 persistent `SP_COLOUR_ID`, overwriting the user's explicit choice across
 restarts. The stateful mode + dual-preference model in this RFC fixes all three.
 
@@ -339,7 +354,7 @@ overrides with very little XML.
 
 Would let every palette self-report `appearance`, removing the "unspecified"
 caveat. Worth doing incrementally, but blocked on hand-authoring each modern
-file and not required for this RFC to deliver value — the bidirectional
+file and not required for this RFC to deliver value. The bidirectional
 companion lookup covers legacy palettes in the meantime.
 
 ## Prior art
@@ -367,14 +382,14 @@ companion lookup covers legacy palettes in the meantime.
 
 1. **Naming convention** for dark variants. **Resolved (2026-08-01).** Standardise
    on a `"<Name> Dark"` suffix, as shipped.
-2. **Default mode for fresh installs** — `SYSTEM` or `LIGHT`? **Resolved
+2. **Default mode for fresh installs**: `SYSTEM` or `LIGHT`? **Resolved
    (2026-08-01).** `SYSTEM` is the default; out-of-box rendering is unchanged
    until a frontend reports the OS appearance.
-3. **Settings UI shape** — a single palette list with badges, or separate
+3. **Settings UI shape**: a single palette list with badges, or separate
    Light/Dark pickers? **Resolved (2026-08-01).** Apple ships separate light/dark
    pickers plus a System/Light/Dark mode control; other frontends follow the same
    engine API.
-4. **Per-alphabet dark overrides** — allow a dark palette to override
+4. **Per-alphabet dark overrides**: allow a dark palette to override
    `nodeLabelColorSequence` per group, or is flipping the default label colour
    enough? **Open.** Only the default label colour is flipped today; per-alphabet
    overrides are not done.
@@ -388,3 +403,7 @@ companion lookup covers legacy palettes in the meantime.
   companion lookup) and eight dark companion palettes shipped in DasherCore.
   Apple and Windows apply it end-to-end; GTK and Android apply the canvas only.
 - Open sub-questions: Q4 (per-alphabet dark overrides).
+
+## History
+
+- 2026-11-08 — plain-English summary added, prose simplified for readability, implementation status re-synced against the frontend repos.

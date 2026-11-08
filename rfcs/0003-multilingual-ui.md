@@ -4,10 +4,14 @@ title: Multilingual UI support across all frontends
 status: active
 platforms: [apple, windows, gtk, android, core]
 created: 2026-06-17
-updated: 2026-08-01
+updated: 2026-11-08
 ---
 
 # Multilingual UI support across all frontends
+
+## Plain-English summary
+
+Dasher is a free tool that lets people who cannot use a keyboard write, by zooming in on text they point to with a mouse, their eyes, or a switch. People use it around the world, but until now its menus and buttons have appeared only in English. This proposal translates the whole interface, menus, buttons, and messages alike, into the languages the Dasher engine already knows. Each app follows the language a person's device is set to, with no separate language setting to find. The language someone writes in, such as French or Arabic, stays a separate choice. Early machine translations are built and shipping on all platforms, with human checking still under way.
 
 ## Summary
 
@@ -16,7 +20,7 @@ and enum values via a JSON runtime system (`dasher_set_locale`). However, every
 frontend's own UI chrome (toolbar buttons, settings tabs, onboarding, dialogs)
 is **hardcoded English** with no native localization wired up. This RFC
 proposes a per-platform localization strategy for frontend strings so that
-users get a fully localised experience — engine *and* UI. The **interface
+users get a fully localised experience: engine *and* UI. The **interface
 language follows the OS** (no in-app language picker); the **alphabet** is the
 user's "writing language" control and is deliberately decoupled from the
 interface language. See "Language selection principle".
@@ -28,8 +32,8 @@ There is **no in-app "App Language" picker**.
 
 - iOS 13+, macOS, and Windows already provide a **per-app language choice in
   System Settings** that changes the whole UI immediately, with no relaunch. A
-  custom in-app picker would duplicate this and, on Apple platforms, could only
-  switch the engine locale — not the chrome — which is confusing. So frontends
+  custom in-app picker would duplicate this. On Apple platforms, it could only
+  switch the engine locale, not the chrome, which is confusing. So frontends
   do not ship one.
 - The engine locale (`dasher_set_locale`) is set to the device language on
   launch, so the **parameter labels** follow the OS too.
@@ -37,7 +41,7 @@ There is **no in-app "App Language" picker**.
   equivalent per-app setting (macOS / Windows), or the device language.
 
 The **alphabet** (Settings → Language → Alphabet) is the **writing-language
-control**, and is **independent** of the interface language. A user can run an
+control**, and is independent of the interface language. A user can run an
 English UI and write in French, Arabic, or a phoneme set by selecting that
 alphabet. The alphabet never changes the interface language, and the interface
 language never forces an alphabet.
@@ -46,27 +50,26 @@ This resolves Q3: the UI locale and the alphabet model are independent.
 
 ## Implementation status
 
-Audited August 2026. The engine layer is done. The frontend layer is not done
-on any platform.
+Audited August 2026. The engine layer is done: DasherCore ships 33 locale
+files, and every frontend that uses the C API can localise parameter labels
+through `dasher_set_locale`.
 
-DasherCore ships 33 locale files, and every frontend that uses the C API can
-localise parameter labels through `dasher_set_locale`. But the app chrome — the
-toolbar, the settings tabs, the dialogs, the onboarding text — is hardcoded
-English on every frontend. No frontend ships `.xcstrings`, `.resx`, `.po`, or
-`Localizable.strings` files for its own strings.
+Re-synced 2026-11-08 against the repos: every native frontend now ships
+chrome translations generated from the
+[dasher-shared-resources](https://github.com/dasher-project/dasher-shared-resources)
+catalogue. The translations are machine-generated, with French
+hand-reviewed. The interface language follows the OS on every platform
+(per the Language selection principle); no frontend ships an in-app
+language picker, and the alphabet remains the writing-language control.
+RTL end-to-end verification on any frontend remains open (Arabic, Persian,
+Urdu).
 
 | Platform | Engine strings | App chrome |
 | --- | --- | --- |
-| Dasher-Apple | Follows the OS (engine locale set to the device language on launch; no in-app picker) | Catalog (`Localizable.xcstrings`) shipping 32 machine translations; follows the OS |
-| Dasher-Windows | Localised (engine locale) | English only |
-| Dasher-GTK | Not bound (the gettext domain is never set) | English only |
-| Dasher-Mobile (Android) | Partial | English only; one `values/` bucket, no translations ship |
-
-Apple removed its in-app language picker; both chrome and engine labels now
-follow the OS (per the Language selection principle). Other frontends should do
-the same: localise the chrome to follow the OS, do not add a language picker,
-and expose the alphabet as the writing-language control. The RTL work (Arabic,
-Persian, Urdu) has not been verified end-to-end on any frontend.
+| Dasher-Apple | Follows the OS (unchanged) | Catalog shipping 32 machine translations; follows the OS |
+| Dasher-Windows | Localised (engine locale) | Localised: all chrome strings generated from the shared catalogue (Dasher-Windows #77; training-panel strings #55) |
+| Dasher-GTK | Localised (gettext domain now bound) | All 32 locales generated from the shared catalogue (#66, #67; training/editor strings #88; French hand-reviewed) |
+| Dasher-Mobile (Android) | Localised via the shared catalogue | values-XX generated from the catalogue (#24, #25) |
 
 ## Motivation
 
@@ -74,7 +77,7 @@ Persian, Urdu) has not been verified end-to-end on any frontend.
 
 | Aspect | Dasher-Apple | Dasher-Windows | Dasher-GTK |
 | --- | --- | --- | --- |
-| **DasherCore i18n mechanism** | JSON runtime via C API | JSON runtime via C API (P/Invoke) | gettext `_()` in DasherCore — **domain never bound** |
+| **DasherCore i18n mechanism** | JSON runtime via C API | JSON runtime via C API (P/Invoke) | gettext `_()` in DasherCore: **domain never bound** |
 | **Platform-native i18n used?** | No (`NSLocalizedString`/`.strings`/`.lproj` absent) | No (`.resx`/`.resw` absent) | No (`bindtextdomain`/`.po`/`.mo` absent) |
 | **DasherCore locales shipped** | 33 `strings_*.json` | 33 `strings_*.json` | 1 `en_GB.po` (help text only, unused) |
 | **Languages in UI picker** | 9 | 10 | 0 (no picker) |
@@ -88,7 +91,7 @@ Persian, Urdu) has not been verified end-to-end on any frontend.
    names inside an otherwise-English settings window.
 
 2. **Language pickers are inconsistent.** Apple offers 9 locales, Windows
-   offers 10 (different set), GTK offers none — despite all three shipping the
+   offers 10 (different set), GTK offers none, despite all three shipping the
    same 33 DasherCore locale files.
 
 3. **GTK has no translation infrastructure at all.** Its DasherCore branch
@@ -105,7 +108,7 @@ Persian, Urdu) has not been verified end-to-end on any frontend.
 
 ### Who feels the pain?
 
-Dasher's user base is global — the engine supports writing in 100+ languages,
+Dasher's user base is global: the engine supports writing in 100+ languages,
 and the locale set covers major world languages. But a user who speaks only
 Arabic or Hindi cannot navigate the settings UI in their language.
 
@@ -126,18 +129,18 @@ The user selects one language. Both layers localise from that single choice:
 ```
 
 **Amended (2026-08-27):** the frontend layer is further split into a
-**shared UI catalogue** (in [dasher-shared-resources](https://github.com/dasher-project/dasher-shared-resources) (consumed as a git submodule)) and the
+**shared UI catalogue** ([dasher-shared-resources](https://github.com/dasher-project/dasher-shared-resources), consumed as a git submodule) and the
 platform-native translation files generated from it. Frontend chrome
-strings — toolbar labels, settings section names, dialog text — are
+strings (toolbar labels, settings section names, dialog text) are
 conceptually the same across platforms ("Speed", "Settings", "Privacy",
 "Copy"), so translating them four times is waste. The catalogue defines
 canonical English keys; a generation script in each frontend maps them
 to `.po` msgids, Android `string name=` keys, Apple `xcstrings` keys, or
 Windows `.resx` names. Platform-specific strings (onboarding copy unique
-to iOS, GTK ydotool setup text) live in the catalogue with a
-`platforms` annotation and are skipped by other frontends' generators.
-Frontends vendor the catalogue as a git submodule or copy it at build
-time; either way, one translator contribution propagates everywhere.
+to iOS, GTK ydotool setup text) live in the catalogue with a `platforms`
+annotation and are skipped by other frontends' generators. Frontends
+vendor the catalogue as a git submodule or copy it at build time; either
+way, one translator contribution propagates everywhere.
 
 The frontend calls `dasher_set_locale(ctx, code)` **and** switches its own
 native resource bundle to the same locale simultaneously.
@@ -188,7 +191,7 @@ alphabetically by endonym with English first.
 
 #### Shared metadata
 
-A small JSON file in DasherCore (e.g. `Strings/locales.json`) serves as the
+A small JSON file in DasherCore (e.g. `Strings/locales.json`) is the
 canonical machine-readable list:
 
 ```json
@@ -252,7 +255,7 @@ Migration steps:
 
 #### GTK (Dasher-GTK)
 
-**Mechanism:** **gettext** — the standard on the GNOME/Linux platform.
+**Mechanism:** **gettext**, the standard on the GNOME/Linux platform.
 
 DasherCore's `_()` macro is already active in this build. The frontend needs to:
 
@@ -267,10 +270,10 @@ DasherCore's `_()` macro is already active in this build. The frontend needs to:
    textdomain("dasher-gtk");
    ```
 2. **Create `.po`/`.pot` files** under a new `po/` directory:
-   - `POTFILES.in` — list of source files with translatable strings.
-   - `dasher-gtk.pot` — template generated by `xgettext`.
-   - `dasher-gtk.{locale}.po` — per-locale translations.
-   - `LINGUAS` — list of available locale codes.
+   - `POTFILES.in`: list of source files with translatable strings.
+   - `dasher-gtk.pot`: template generated by `xgettext`.
+   - `dasher-gtk.{locale}.po`: per-locale translations.
+   - `LINGUAS`: list of available locale codes.
 3. **Wrap all frontend strings** in `_()`:
    - `set_title(_("Dasher v6"))` instead of `set_title("Dasher v6")`.
    - All `Gtk::Label`, `Gtk::Button`, menu items, tooltips.
@@ -284,7 +287,7 @@ DasherCore's `_()` macro is already active in this build. The frontend needs to:
      (`dasher_set_locale`), or (b) properly bind DasherCore's own gettext
      domain (`bindtextdomain("dasher", ...)`) so the `_()` calls in DasherCore
      resolve to translations. Option (b) requires DasherCore to ship `.po` files,
-     which it currently doesn't — the JSON system replaced them. **Option (a)
+     which it currently doesn't; the JSON system replaced them. **Option (a)
      is recommended.**
 6. **RTL:** GtkWindow respects `GtkWidget::default-text-direction`. Set
    `Gtk::TextDirection::RTL` for RTL locales.
@@ -307,11 +310,11 @@ For `ar`, `fa`, `ur`:
 
 - **Layout mirroring:** Toolbar, status bar, and sidebar mirror horizontally.
 - **Canvas position:** The canvas "position" setting (Left/Right/Top/Bottom)
-  should respect the layout direction — a right-handed Arabic user expects the
+  should respect the layout direction: a right-handed Arabic user expects the
   canvas on the right side by default.
 - **Text alignment:** All labels, buttons, and text fields use natural
   alignment for the script.
-- **Canvas glyphs:** The Dasher canvas itself is not affected — text composition
+- **Canvas glyphs:** The Dasher canvas itself is not affected: text composition
   direction is determined by the alphabet model, not the UI locale. An Arabic
   alphabet model already produces RTL text output inside the canvas.
 
@@ -350,7 +353,7 @@ Many UI strings are identical across platforms (e.g. "Play", "Pause", "Copy",
 - Translators can work from a single English source and apply to their
   platform's format.
 
-This is optional / aspirational — the priority is getting the per-platform
+This is optional / aspirational; the priority is getting the per-platform
 infrastructure in place first.
 
 ## Drawbacks
@@ -364,7 +367,7 @@ infrastructure in place first.
   languages. Without a translation platform (Weblate, Crowdin), this falls on
   contributors to keep up.
 - **Apple String Catalogs require Xcode 15+.** Older toolchains won't support
-  `.xcstrings` (minor concern — current builds use recent Xcode).
+  `.xcstrings` (minor concern; current builds use recent Xcode).
 - **GTK gettext adoption adds build complexity** (CMake gettext macros,
   `.mo` install paths).
 
@@ -396,7 +399,7 @@ names in an English settings window).
 ### Don't expose all 33 locales in the picker
 
 Only show locales that have complete frontend translations. Rejected because
-DasherCore already has all 33 — showing them costs nothing, and partial
+DasherCore already has all 33; showing them costs nothing, and partial
 translation (engine localised, some UI localised) is still better than none.
 Frontends fall back to English per-string, so incomplete translations degrade
 gracefully.
@@ -406,33 +409,33 @@ gracefully.
 - **Dasher v5** shipped platform-native localisation: macOS had `.strings`/`.lproj`
   in many languages; Windows had `.resx`; GTK used gettext with community `.po`
   files. The v6 rewrite lost this by using hardcoded strings.
-- **GIMP / Inkscape / GNOME apps** — all use gettext + `.po` with large community
+- **GIMP / Inkscape / GNOME apps** all use gettext + `.po` with large community
   translation teams.
-- **Signal** — uses a shared translation bank (`.json`) that generates
+- **Signal** uses a shared translation bank (`.json`) that generates
   platform-specific resource files via a build script.
 
 ## Unresolved questions
 
-1. **GTK C API adoption** — Should GTK switch to the C API (`dasher_set_locale`)
+1. **GTK C API adoption**: Should GTK switch to the C API (`dasher_set_locale`)
    for engine strings, or should DasherCore re-generate gettext `.po` files
    alongside the JSON files? **Open.** GTK has not adopted the C API yet; the C
    API route remains the recommendation.
 
-2. **Translation quality bar** — Do we ship machine translations immediately
-   (marked fuzzy), or wait for human review per language? **Open.** No frontend
-   ships translations yet; the bar is undecided.
+2. **Translation quality bar**: Do we ship machine translations immediately
+   (marked fuzzy), or wait for human review per language? **Open.** Machine
+   translations now ship pending review; the bar is undecided.
 
-3. **Locale vs. alphabet model** — Should changing the UI locale auto-suggest a
+3. **Locale vs. alphabet model**: Should changing the UI locale auto-suggest a
    matching alphabet model? **Resolved (2026-08-02).** They are independent: the
    UI locale follows the OS (no in-app picker), and the alphabet is the
    user-chosen writing-language control. No auto-suggest. See "Language
    selection principle".
 
-4. **Plural forms** — Do any frontend strings need plural-aware translation?
+4. **Plural forms**: Do any frontend strings need plural-aware translation?
    **Resolved (2026-08-01).** Most UI strings are labels, not counts, so
    plural-aware translation is a non-issue for v1.
 
-5. **Keyboard extension (iOS)** — Does `DasherKeyboard` share the same
+5. **Keyboard extension (iOS)**: Does `DasherKeyboard` share the same
    `.xcstrings` as the main app, or need a separate catalog? **Open.** Decided
    when iOS localisation lands.
 
@@ -442,13 +445,14 @@ gracefully.
 - Decided by: maintainers
 - Date: 2026-08-01
 - Decision: The two-layer model is accepted. Engine strings localise through
-  `dasher_set_locale` (done — 33 locale files ship). Frontend chrome localises
+  `dasher_set_locale` (done; 33 locale files ship). Frontend chrome localises
   through each platform's native catalog. The **interface language follows the
   OS** (no in-app language picker; engine locale set to the device language on
   launch), and the **alphabet is the decoupled writing-language control** (see
   "Language selection principle"). This RFC is the plan of record for the
   frontend work.
-- Open sub-questions: Q1, Q2, Q5. (Q3 resolved.)
+- Open sub-questions: Q1, Q2, Q5. (Q3 resolved.) For Q2 (translation quality
+  bar), machine translations now ship pending review.
 
 ## History
 
@@ -461,3 +465,4 @@ gracefully.
   (see Principle above). Dasher-GTK and Dasher-Android now ship all 33
   DasherCore locales (machine-translated via batch pass, French
   hand-reviewed). Frontend generators consume the catalogue.
+- 2026-11-08 — plain-English summary added, prose simplified for readability, implementation status re-synced against the frontend repos.

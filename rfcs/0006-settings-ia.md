@@ -4,19 +4,30 @@ title: Settings information architecture and progressive disclosure
 status: implemented
 platforms: [apple, windows, gtk, android, core]
 created: 2026-06-18
-updated: 2026-08-01
+updated: 2026-11-08
 ---
 
 # Settings information architecture and progressive disclosure
 
+## Plain-English summary
+
+Dasher is a free tool that lets people who cannot use a keyboard write, by
+zooming in on text they point to with a mouse, their eyes, or a switch. It has
+more than a hundred settings, which is far too many for most people to take in
+at once. This proposal sorts them into three levels: a small set of everyday
+choices, a larger set for people who want more control, and everything for
+experts. People would choose their level and could change it at any time. The
+settings pages are built and shipping in the apps, but the three-level choice
+is still at the ideas stage.
+
 ## Summary
 
 DasherCore exposes **108 parameters** across 5 groups. The `settings_manifest.json`
-already tags every parameter with a `tier` — `common` (29), `advanced` (36), or
+already tags every parameter with a `tier`: `common` (29), `advanced` (36), or
 `expert` (43). Frontends use this **minimally**: the C API exposes a binary
 `advanced` flag (collapsing the three tiers into two), and some Apple targets
 (DasherVision, DasherKeyboard) group advanced-flagged params into a separate
-"Advanced" section. But no frontend implements true progressive disclosure —
+"Advanced" section. But no frontend implements true progressive disclosure:
 the three-tier system is not exposed, and users cannot choose a complexity
 level. This RFC proposes activating the full tier system as a
 progressive-disclosure mechanism: **Simple** (common only), **Advanced**
@@ -26,9 +37,10 @@ and the critical need for end-user research to validate the tier assignments.
 
 ## Implementation status
 
-Audited August 2026. The tab structure and the dynamic rendering from the engine
-manifest are implemented on most platforms. The three-tier progressive disclosure
-(Simple / Advanced / Pro) is not implemented on any platform.
+Audited August 2026; re-synced November 2026. The tab structure and the dynamic
+rendering from the engine manifest are implemented on all native frontends. The
+three-tier progressive disclosure (Simple / Advanced / Pro) is not implemented
+on any platform.
 
 | Platform | Tabs from manifest | Tier filtering |
 | --- | --- | --- |
@@ -36,7 +48,7 @@ manifest are implemented on most platforms. The three-tier progressive disclosur
 | Dasher-Windows | Yes (10 tabs) | No |
 | Dasher-GTK | Yes (dynamic, from the parameter schema) | No |
 | dasher-web | Own panel structure (8 panels) | No |
-| Dasher-Mobile (Android) | No (a flat 5-row list, not from the manifest) | No |
+| Dasher-Mobile (Android) | Yes (settings UI generated from the engine parameter schema via the C API; moved to schema-driven settings in 2026) | No |
 
 The `tier` field exists in `settings_manifest.json`, but the C API collapses it
 to a binary `advanced` flag, and no frontend filters by it. The end-user
@@ -47,7 +59,7 @@ card-sort study to validate the tier assignments has not run.
 ### The problem
 
 108 parameters is overwhelming. A new user opening Settings sees dozens of
-sliders, switches, and enums — many with opaque names like
+sliders, switches, and enums, many with opaque names like
 `LP_DYNAMIC_BUTTON_LAG_MS` or `BP_TWO_PUSH_OUTER` that only make sense to a
 Dasher expert. The design guide §7 acknowledges this:
 
@@ -63,17 +75,17 @@ disclosure or user-facing complexity toggle.
 
 | Layer | Mechanism | Used? |
 | --- | --- | --- |
-| `settings_manifest.json` `tier` field | `common` / `advanced` / `expert` (3 levels) | **Read but collapsed** — C API exposes binary `advanced` only |
-| C API `int advanced` (`dasher.h:181`) | Binary (0 = not advanced, 1 = advanced) | **Yes, minimally** — Vision/Keyboard group advanced params into separate section; App/Mac/Windows read into struct but don't filter by it |
-| Contextual subgroup filtering | Hide params for inactive input modes | **Yes** — all frontends |
+| `settings_manifest.json` `tier` field | `common` / `advanced` / `expert` (3 levels) | **Read but collapsed**: C API exposes binary `advanced` only |
+| C API `int advanced` (`dasher.h:181`) | Binary (0 = not advanced, 1 = advanced) | **Yes, minimally**: Vision/Keyboard group advanced params into separate section; App/Mac/Windows read into struct but don't filter by it |
+| Contextual subgroup filtering | Hide params for inactive input modes | **Yes**: all frontends |
 | `dependsOn` field (3 params) | Show param only if dependency is enabled | **Not used by any frontend** |
 
 ### Current frontend state
 
 | | Apple | Windows | GTK |
 | --- | --- | --- | --- |
-| Tabs/sections | 7 (Customization, Input, Language, Output, Speech, Game Mode, Privacy) | Same 7, dynamic from manifest | 3 hand-built pages (Mode, Help, Input Mapping) — **does not render from manifest** |
-| Tier filtering | Minimal — Vision/Keyboard: advanced params grouped into "Advanced" section. App/Mac: field read but not used for visibility. | Minimal — `Advanced` field read into struct, not used for filtering | None |
+| Tabs/sections | 7 (Customization, Input, Language, Output, Speech, Game Mode, Privacy) | Same 7, dynamic from manifest | 3 hand-built pages (Mode, Help, Input Mapping). Does not render from manifest |
+| Tier filtering | Minimal, Vision/Keyboard: advanced params grouped into "Advanced" section. App/Mac: field read but not used for visibility. | Minimal: `Advanced` field read into struct, not used for filtering | None |
 | Subgroup filtering | Yes (15 input modes) | Yes (14 input modes) | No |
 | Simple/Advanced toggle | None | None | None |
 | Settings rendered from manifest | Yes (dynamic) | Yes (dynamic) | **No** (hand-built) |
@@ -90,8 +102,8 @@ disclosure or user-facing complexity toggle.
 | **Total** | **29** | **36** | **43** | **108** |
 
 Key observation: **Language and Game Mode have zero common-tier parameters.**
-A Simple-mode user would see no Language or Game Mode settings at all — which
-may be correct (those are inherently advanced) or may indicate the tier
+A Simple-mode user would see no Language or Game Mode settings at all. That
+may be correct (those are inherently advanced), or it may indicate the tier
 assignments need adjustment.
 
 ## Detailed design
@@ -127,7 +139,7 @@ are visible:
 
 #### Default: Simple
 
-New users start in Simple mode. This shows ~29 parameters — enough to choose an
+New users start in Simple mode. This shows ~29 parameters: enough to choose an
 input method, set speed, pick colours/fonts, select alphabet, and toggle
 speech. The design guide's "live mini-canvas preview" helps them see effects
 immediately.
@@ -135,14 +147,14 @@ immediately.
 #### Discoverability of Advanced/Pro
 
 - A banner or footer in Simple mode: *"Showing essential settings. [Show
-  advanced settings]"* — tappable link, not a hidden menu.
+  advanced settings]"* (a tappable link, not a hidden menu).
 - The toggle is persistent (saved per-user), not per-session.
 - Switching to Pro shows a brief confirmation: *"Pro mode shows all 108
   parameters. You can switch back anytime."*
 
 #### Relationship to contextual filtering
 
-Tier filtering and subgroup filtering **compose** — a parameter is visible only
+Tier filtering and subgroup filtering **compose**: a parameter is visible only
 if *both* its tier is enabled AND its subgroup matches the active input mode.
 So a Simple-mode user with Click Mode active sees only common-tier Click Mode
 params; a Pro-mode user sees all Click Mode params.
@@ -165,7 +177,7 @@ become tabs, plus two frontend-added tabs:
 **In Simple mode**, tabs with zero common-tier parameters (Language, Game Mode)
 are hidden entirely. Speech and Privacy remain always visible.
 
-**GTK must adopt dynamic rendering** from the manifest — the current hand-built
+**GTK must adopt dynamic rendering** from the manifest: the current hand-built
 3-page PreferencesWindow is a dead end.
 
 ### `dependsOn` activation
@@ -182,8 +194,8 @@ Currently none do.
 The `tier` field exists in `settings_manifest.json` (three levels) but is
 currently collapsed to a binary `bool advancedSetting` in `Parameters.h` and
 exposed via the C API as `int advanced` (`dasher.h:181`). This loses the
-distinction between `common` and `advanced` — both map to `advanced == 0`,
-while only `expert` maps to `advanced == 1` (or similar — the exact mapping
+distinction between `common` and `advanced`: both map to `advanced == 0`,
+while only `expert` maps to `advanced == 1` (or similar: the exact mapping
 needs verification). To expose the three-tier system cleanly:
 
 - **Option A (no API change):** Frontends read `tier` from the manifest JSON
@@ -193,7 +205,7 @@ needs verification). To expose the three-tier system cleanly:
   `dasher_get_parameter_tier(ctx, param_key)` returning `"common"`,
   `"advanced"`, or `"expert"`.
 
-Option B is recommended — it keeps the manifest as the sole SSOT and avoids
+Option B is recommended: it keeps the manifest as the sole SSOT and avoids
 frontends hardcoding tier data.
 
 #### Apple
@@ -213,8 +225,8 @@ frontends hardcoding tier data.
 
 #### Windows
 
-- `ParameterDisplayInfo` already has an `Advanced` int field (read from C API) —
-  extend the C API to expose the full tier and carry it as 0=common, 1=advanced,
+- `ParameterDisplayInfo` already has an `Advanced` int field (read from C API).
+  Extend the C API to expose the full tier and carry it as 0=common, 1=advanced,
   2=expert.
 - Add a ComboBox or ToggleButton in `SettingsPanel` header.
 - Filter in `LoadParameterGroups()` by tier before rendering widgets.
@@ -227,15 +239,15 @@ frontends hardcoding tier data.
 ### End-user research (critical path)
 
 This RFC proposes the *mechanism* (progressive disclosure via existing tiers),
-but the *tier assignments* — which of the 108 parameters are "common" vs
-"advanced" vs "expert" — **must be validated with real end users** before
+but the *tier assignments* (which of the 108 parameters are "common" vs
+"advanced" vs "expert") must be validated with real end users before
 building. The current assignments were tagged by developers, not users. This
 is the most important part of this RFC and should not be skipped or deferred.
 
 #### Q1. Are the current tier assignments correct?
 
 The manifest was tagged by a developer, not validated with users. A parameter
-like `BP_AUTO_SPEEDCONTROL` (auto speed adjustment) is marked `common` — is
+like `BP_AUTO_SPEEDCONTROL` (auto speed adjustment) is marked `common`. Is
 that right? Is `LP_LM_ALPHA` (PPM smoothing) correctly `expert`?
 
 **Approach:** Card-sort study with 5-10 Dasher users (mixed experience levels).
@@ -244,7 +256,7 @@ Ask them to sort parameter labels into "essential," "useful sometimes," and
 
 #### Q2. Is "Simple" too simple?
 
-29 parameters may still overwhelm some users — or it may be too restrictive.
+29 parameters may still overwhelm some users, or it may be too restrictive.
 AAC users with cognitive disabilities may need fewer options still.
 
 **Approach:** Observe first-time users in Simple mode. Can they accomplish
@@ -258,7 +270,7 @@ page is heavier. Which feels more natural to users?
 #### Q4. Should Pro mode require confirmation?
 
 If a user accidentally enables Pro, they see 108 parameters. Should there be a
-speed bump ("Pro mode is for advanced users — continue?"), or is that
+speed bump ("Pro mode is for advanced users. Continue?"), or is that
 patronising?
 
 ### Relationship to other RFCs
@@ -266,16 +278,16 @@ patronising?
 | RFC | Relationship |
 | --- | --- |
 | **0004 (Onboarding)** | Onboarding sets sensible defaults; Settings is where users discover more. A user who completes onboarding in Simple mode should never need to leave Simple unless they want to. |
-| **0005 (Migration)** | After v5→v6 migration, the user lands in Simple mode. Migrated settings are preserved regardless of visibility — a param hidden in Simple still has its migrated value. |
+| **0005 (Migration)** | After v5→v6 migration, the user lands in Simple mode. Migrated settings are preserved regardless of visibility: a param hidden in Simple still has its migrated value. |
 | **0003 (Multilingual)** | Settings UI strings must be localised. The mode labels ("Simple" / "Advanced" / "Pro") need translation. |
 
 ### Design guide updates needed
 
 1. **Fix DESIGN.md staleness:** The Settings Modal section lists tabs as
-   "Customization, Punctuation, Volume, Locks, Accessibility" — these are
+   "Customization, Punctuation, Volume, Locks, Accessibility". These are
    legacy v5 names. Update to match the manifest groups.
 
-2. **Fix README.md §7 Input count:** Says "Input (63 params)" — actual is 65.
+2. **Fix README.md §7 Input count:** Says "Input (63 params)". Actual is 65.
 
 3. **Document the tier system:** Add the Simple/Advanced/Pro concept to the
    design guide, including the default mode, the discoverability pattern, and
@@ -299,14 +311,14 @@ patronising?
   toggle is critical.
 - **Language tab vanishes in Simple mode.** Zero `common`-tier Language params
   means Simple users can't change alphabet or language model settings. This
-  may be the wrong default — alphabet selection feels like a "common" task.
+  may be the wrong default: alphabet selection feels like a "common" task.
 
 ## Alternatives considered
 
 ### Search-based settings (no tiers)
 
 Instead of progressive disclosure, offer a search bar that filters parameters
-by name/description. Good as a *supplement* but not a replacement — new users
+by name/description. Good as a *supplement* but not a replacement: new users
 don't know what to search for.
 
 ### Guided settings wizard
@@ -322,7 +334,7 @@ Interesting but over-engineered for v6's first pass.
 
 ### Status quo (contextual filtering only)
 
-Keep showing all tiers. Rejected — the design guide explicitly says users are
+Keep showing all tiers. Rejected: the design guide explicitly says users are
 overwhelmed, and the tier field already exists and is unused.
 
 ## Prior art
@@ -331,7 +343,7 @@ overwhelmed, and the tier field already exists and is unused.
 - **iOS Settings:** Hides developer/EAP options entirely until unlocked.
 - **VS Code:** Three-tier settings (User, Workspace, Folder) with a search-first
   UI that also exposes a JSON view for power users.
-- **Grid 3 (Smartbox):** Quick vs Advanced settings toggle — widely praised by
+- **Grid 3 (Smartbox):** Quick vs Advanced settings toggle, widely praised by
   AAC professionals for reducing cognitive load on end users.
 - **v5 Dasher:** Had a flat preferences dialog with legacy tab names
   (Punctuation, Volume, Locks, Accessibility). No tiering. This is what
@@ -339,16 +351,16 @@ overwhelmed, and the tier field already exists and is unused.
 
 ## Unresolved questions
 
-1. **Tier audit** — Who runs the card-sort study, and when? **Open.** The card
+1. **Tier audit:** Who runs the card-sort study, and when? **Open.** The card
    sort has not run; this blocks the three-tier UI.
-2. **Alphabet selection in Simple mode** — promote the alphabet picker to
+2. **Alphabet selection in Simple mode:** promote the alphabet picker to
    `common` tier, or move it to the status bar? **Open.** Tied to the tier audit.
-3. **Pro mode confirmation** — speed bump or not? **Open.** The tier UI is not
+3. **Pro mode confirmation:** speed bump or not? **Open.** The tier UI is not
    built.
-4. **GTK timeline** — when does GTK adopt dynamic manifest rendering?
+4. **GTK timeline:** when does GTK adopt dynamic manifest rendering?
    **Resolved (2026-08-01).** GTK now renders dynamically from the parameter
    schema (the prerequisite is done); it still lacks tier filtering.
-5. **Search** — add a settings search bar alongside the tier system? **Open.** A
+5. **Search:** add a settings search bar alongside the tier system? **Open.** A
    future enhancement.
 
 ## Resolution
@@ -357,7 +369,11 @@ overwhelmed, and the tier field already exists and is unused.
 - Decided by: maintainers
 - Date: 2026-08-01
 - Decision: The tab structure and dynamic manifest rendering are implemented on
-  Apple, Windows, GTK, and web (Android partial). The three-tier (Simple /
+  Apple, Windows, GTK, Android, and web. The three-tier (Simple /
   Advanced / Pro) progressive disclosure is not implemented on any platform; it
   is blocked on the tier-validation card sort.
 - Open sub-questions: Q1, Q2, Q3, Q5.
+
+## History
+
+- 2026-11-08 — plain-English summary added, prose simplified for readability, implementation status re-synced against the frontend repos.

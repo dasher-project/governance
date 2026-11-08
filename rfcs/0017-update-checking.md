@@ -1,34 +1,38 @@
 ---
 rfc: 0017
 title: Update distribution and in-app update checking (dual-track)
-status: proposed
+status: active
 platforms: [apple, windows, gtk, android, web]
 created: 2026-08-26
-updated: 2026-08-26
+updated: 2026-11-08
 ---
 
 # Update distribution and in-app update checking (dual-track)
+
+## Plain-English summary
+
+Dasher is a free tool that lets people who cannot use a keyboard write by zooming in on text they point to with a mouse, their eyes, or a switch. New versions of Dasher fix problems, but people who installed it outside an app store have no automatic way to hear about them. This proposal has the app quietly check for a newer version when it starts, at most once a week, and show a small message with a link if one exists. The app never downloads or installs anything by itself, and the check can be turned off in settings. App stores continue to handle updates for copies installed from them. This approach is now the agreed plan.
 
 ## Summary
 
 Dasher frontends ship through two kinds of channel, and update behaviour must
 match the channel, not fight it:
 
-1. **Managed channels** — platform stores (App Store / TestFlight, Google
+1. **Managed channels**: platform stores (App Store / TestFlight, Google
    Play, possible future Flathub listing). The store owns discovery,
    download, installation and rollback. Dasher does **no** in-app update
    mechanics there beyond pointing users at the store page when a store
    policy requires it.
-2. **Self-managed channels** — GitHub Releases (macOS today, Windows today,
+2. **Self-managed channels**: GitHub Releases (macOS today, Windows today,
    Android APKs today, GTK AppImage), Flatpak (GTK, user-managed via
    `flatpak update`), and future Linux store listings. Here Dasher itself is
    responsible for telling the user a newer version exists, because nothing
-   else will — and for an AAC audience, "go check the releases page" is not
-   an accessible update path.
+   else will. For an AAC audience, "go check the releases page" is not an
+   accessible update path.
 
 Every frontend implements one shared behaviour for self-managed builds: a
 **passive in-app update check** against the GitHub Releases API on launch
-(at most weekly, opt-out in Settings → Privacy), showing a non-modal
+(at most weekly, opt-out in Settings → Privacy), which shows a non-modal
 notification with a link. No silent downloads, no self-installation.
 
 ## Implementation status
@@ -43,10 +47,12 @@ dual-track split.
 | --- | --- | --- |
 | Dasher-Apple (iOS) | TestFlight | None (TestFlight notifies) |
 | Dasher-Apple (macOS) | GitHub Releases | None |
-| Dasher-Windows | GitHub Releases; STORE variant planned | `UpdateChecker` (non-STORE builds only) |
+| Dasher-Windows | GitHub Releases; STORE variant planned | `UpdateChecker` (non-STORE builds only; modal dialog; the non-modal toast in clause 4 is still pending) |
 | Dasher-GTK | GitHub Releases (Flatpak + AppImage artifacts) | Implemented — `UpdateChecker` (self-managed builds; Flatpak skips) + "Check for updates" toggle in Preferences → Privacy |
-| Dasher-Android | GitHub Releases APKs; Play Store intended | None |
+| Dasher-Android | GitHub Releases APKs; Play Store intended | Implemented (self-managed APK builds; Dasher-Android #26) |
 | dasher-web | Always "latest" by nature of the browser | N/A |
+
+Re-synced 2026-11-08.
 
 ## Motivation
 
@@ -61,7 +67,7 @@ dual-track split.
 - **Version display alone doesn't close the loop.** RFC 0016 put the version
   in Settings so users can *report* what they run; it does not tell them
   something newer exists.
-- **Stores handle it — when we're on them.** iOS/TestFlight today; Play
+- **Stores handle it (when we're on them).** iOS/TestFlight today; Play
   Store and possibly Flathub are intended destinations for Android and GTK.
   On those channels, in-app update UI is at best redundant and at worst a
   store-policy violation. So the behaviour must be channel-conditional, not
@@ -85,25 +91,25 @@ dual-track split.
 - Flatpak is a **hybrid**: installed from a bundle but updated by the system
   package manager. Flatpak builds set `FLATPAK_ID`/`/.flatpak-info` (the
   keyboard-setup dialog already detects this). Flatpak builds show the
-  notification only if `flatpak update` would not handle it — practically,
+  notification only if `flatpak update` would not handle it. Practically,
   Flatpak builds behave as **managed** (the notification says "update via
   your system's Flatpak tools" only if the remote is behind; we do not
   detect that, so Flatpak builds default to silent/managed).
 
 ### The check (self-managed builds only)
 
-1. **On launch** (after the window is up, off the critical path — never
+1. **On launch** (after the window is up, off the critical path; never
    block first paint), and at most once every 7 days (persisted timestamp).
 2. **GET** `https://api.github.com/repos/dasher-project/<repo>/releases?per_page=1`
    (10-second timeout, fail silent). No auth token, no telemetry, no
-   machine identifiers — the request contains nothing but the IP GitHub
+   machine identifiers. The request contains nothing but the IP GitHub
    already sees.
 3. Compare the release tag to the running app version (GTK: the git-describe
    string from RFC 0016's mechanism; Android: `BuildConfig.VERSION_NAME`;
    Windows: assembly version; Apple: bundle short version). Tag comparison
    is semver-numeric, ignoring leading `v`.
 4. If newer: show a **non-modal** notification (in-app banner or system
-   notification) — never a modal dialog that could interrupt typing. The
+   notification), never a modal dialog that could interrupt typing. The
    notification carries the release title and a link to the release page.
    Dismiss is persistent ("skip this version") plus a "remind me later"
    that re-arms after the next 7-day window.
@@ -114,8 +120,8 @@ dual-track split.
 6. **What we do NOT do**: download the update, install it, or run
    installers. The link opens the release page in the platform browser /
    store. Rationale: self-installation is a security surface (code-signing
-   validation, partial downloads, disk access) that stores already solve,
-   and the AppImage side would need AppImageUpdate integration, which can
+   validation, partial downloads, disk access) that stores already solve.
+   The AppImage side would need AppImageUpdate integration, which can
    be a future amendment once there is evidence users want it.
 
 ### Platform notes
@@ -142,7 +148,7 @@ dual-track split.
 ### Telemetry
 
 One opt-in analytics event (`update_prompt_shown`) on display, gated by the
-existing RFC 0001 consent — so we can measure whether self-managed users are
+existing RFC 0001 consent, so we can measure whether self-managed users are
 being reached. No event contains the version list or any user identifier
 beyond the existing anonymous id.
 
@@ -162,15 +168,15 @@ beyond the existing anonymous id.
 
 - **Sparkle / WinSparkle / in-app self-install:** heavier, security-bearing,
   and unnecessary while we are not the sole channel. Deferred (see clause 6).
-- **Do nothing on self-managed channels:** the status quo; means our most
-  engaged early users (who installed from GitHub) are stranded on old
-  builds — the exact population giving us feedback in v6.
+- **Do nothing on self-managed channels:** the status quo. It means our
+  most engaged early users (who installed from GitHub) are stranded on old
+  builds, the exact population giving us feedback in v6.
 - **Web-page-only announcements:** not accessible enough for the audience;
   requires users to self-advocate.
 
 ## Prior art
 
-- **Dasher-Windows' UpdateChecker** — the API-polling pattern already
+- **Dasher-Windows' UpdateChecker**: the API-polling pattern already
   shipped; this RFC generalises it and softens its modal to a toast.
 - **Firefox's** "release versus store" split on Windows/macOS.
 - **Signal Desktop's** GitHub-releases check before their store builds.
@@ -179,7 +185,7 @@ beyond the existing anonymous id.
 
 Per [RFC 0011](./0011-testing.md): manual verification primarily.
 - Unit-test the version comparison (tag vs running version, `v`-stripping,
-  semver ordering) — pure logic, lands in each frontend's test target.
+  semver ordering). It is pure logic and lands in each frontend's test target.
 - Manual: self-managed build against a repo with a newer tag → notification
   appears once, dismissal persists across restarts, "remind me later"
   re-arms after 7 days (simulate by clock override in a debug build).
@@ -188,26 +194,29 @@ Per [RFC 0011](./0011-testing.md): manual verification primarily.
 
 ## Unresolved questions
 
-1. **Notification surface** — in-app banner vs system notification vs both,
+1. **Notification surface**: in-app banner vs system notification vs both,
    per platform. **Open.**
-2. **Flathub submission for GTK** — if/when it happens, does the Flatpak
+2. **Flathub submission for GTK**: if/when it happens, does the Flatpak
    build keep a "new release" notification that opens the Flathub page
    (store pages lag artifacts by days)? **Open.**
-3. **Android Play release track** — internal / closed / open / production
+3. **Android Play release track**: internal / closed / open / production
    affects whether the direct-APK channel retires. **Open.**
 4. **Update the IME too?** The Android keyboard service is a separate
-  surface — should it also notify, or only the main app? **Open** (leaning
+  surface: should it also notify, or only the main app? **Open** (leaning
    main-app-only; the IME has no room for banners).
 
 ## Resolution
 
-- State: pending — open for discussion
-- Decided by: —
-- Date: —
-- Decision: Not yet accepted. Dasher-Windows' UpdateChecker is the seed
-  implementation; no other frontend has shipped the behaviour.
-- Open sub-questions: all (see Unresolved questions).
+- State: accepted
+- Decided by: maintainers
+- Date: 2026-11-08
+- Decision: The dual-track model is the plan of record. Implemented on GTK
+  (#69) and Android APK builds (#26); Windows ships its UpdateChecker with
+  the modal-to-toast change still pending; the macOS GitHub-release channel
+  remains to build; Flathub and Play-track questions stay open.
+- Open sub-questions: 1–4 as listed.
 
 ## History
 
 - _2026-09-09_ — _Implementation status corrected: Dasher-GTK ships the check for self-managed builds (UpdateChecker + Privacy opt-out), which the initial table missed._
+- 2026-11-08 — plain-English summary added, prose simplified for readability, implementation status re-synced against the frontend repos.

@@ -9,6 +9,14 @@ updated: YYYY-MM-DD
 
 # <title>
 
+## Plain-English summary
+
+Three to six short sentences for a non-technical reader (a caregiver, a
+trustee, a new contributor). No jargon, no API or parameter names. Say what
+the change is in everyday terms, who it helps, and (once known) whether it
+is built or still at the ideas stage. Every RFC carries this section so the
+set stays readable outside the maintainer team.
+
 ## Summary
 
 One paragraph explaining the change. What does it do, and at a high level, how?

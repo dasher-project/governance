@@ -57,7 +57,9 @@ This keeps RFCs readable for someone arriving fresh.
 The `Status` column is the RFC's lifecycle state (see above). Most RFCs now carry
 an `## Implementation status` section that records, platform by platform, what is
 actually built. Read that section for the real picture — `implemented` often
-means "landed on some platforms, not all."
+means "landed on some platforms, not all." Every RFC also opens with a
+`## Plain-English summary` written for non-technical readers: start there if the
+specs are not your day job.
 
 | # | Title | Status | Platforms |
 | --- | --- | --- | --- |
@@ -76,12 +78,15 @@ means "landed on some platforms, not all."
 | [0012](./0012-typing-rate.md) | Typing rate (CPS / WPM) display | implemented | apple, windows, gtk, android, core |
 | [0013](./0013-custom-rendering.md) | Node-tree rendering API (custom rendering) | active | apple, windows, gtk, android, web, core |
 | [0014](./0014-image-labels.md) | Image labels for alphabet symbols | implemented | apple, windows, gtk, android, web, core |
-| [0015](./0015-direct-entry-mode.md) | Direct-entry mode (typing into other applications) | proposed | apple, windows, gtk, android, core |
+| [0015](./0015-direct-entry-mode.md) | Direct-entry mode (typing into other applications) | implemented | apple, windows, gtk, android, core |
 | [0016](./0016-version-in-settings.md) | Report the app version in Settings (Privacy tab for now) | active | apple, windows, gtk, android, web |
-| [0017](./0017-update-checking.md) | Update distribution and in-app update checking (dual-track) | proposed | apple, windows, gtk, android, web |
-| [0018](./0018-startup-loading-states.md) | Startup loading states — no frozen or black windows | proposed | apple, windows, gtk, android, web, core |
-| [0019](./0019-editor-contract.md) | The editor contract — v5-parity editing for the output pane | proposed | apple, windows, gtk, android, core |
+| [0017](./0017-update-checking.md) | Update distribution and in-app update checking (dual-track) | active | apple, windows, gtk, android, web |
+| [0018](./0018-startup-loading-states.md) | Startup loading states — no frozen or black windows | active | apple, windows, gtk, android, web, core |
+| [0019](./0019-editor-contract.md) | The editor contract — v5-parity editing for the output pane | implemented | apple, windows, gtk, android, core |
 | [0020](./0020-emoji-in-tree.md) | Emoji in the tree — a settings-gated emoji group for every alphabet | proposed | android, gtk, windows, apple, web, core |
 | [0021](./0021-control-select-subtree.md) | Control-mode Select subtree — native text selection through Dasher | implemented | core, windows, apple, gtk, android, web |
-| [0022](./0022-diagnostic-logging.md) | Diagnostic logging — shared format, verbosity gating, version-scoped rotation | proposed | windows, apple, gtk, android |
-| [0023](./0023-unified-versioning.md) | Unified versioning and cross-repo release process | draft | governance, core, apple, windows, gtk, android, web |
+| [0022](./0022-diagnostic-logging.md) | Diagnostic logging — shared format, verbosity gating, version-scoped rotation | active | windows, apple, gtk, android |
+| [0023](./0023-unified-versioning.md) | Unified versioning and cross-repo release process | active | governance, core, apple, windows, gtk, android, web |
+
+Statuses and per-platform implementation tables were re-synced against the
+repositories on 2026-11-08.

@@ -94,7 +94,7 @@ following prompt (filled in by the author):
 >   change (e.g. a manual run-through, a screenshot, a UX step).
 
 "Manual verification only" is a legitimate answer, especially for UX-driven
-RFCs like onboarding (0004/0008) or the access-method IA (0010), where the real
+RFCs like onboarding (0004) or the access-method IA (0010), where the real
 validation is with users. The point is that the choice is written down.
 
 ### Where tests live (per repo)

@@ -280,8 +280,13 @@ all four platforms adopt the same shape.
    `SP_INPUT_FILTER` mapping will live in `DasherCore/docs` as the SSOT.
    Steering methods stay per-platform (hardware-gated), names shared.
 2. **Switch Access vs. in-app switch capture on mobile.** **Open.** Should
-   Dasher consume the system switch-access/switch-control events, or capture its
-   own? This is the biggest open design question and blocks deeper switch work.
+   Dasher consume the system switch-access/switch-control events, or capture
+   its own? This is the biggest open design question and blocks deeper switch
+   work. **Decision deferred (2026-11-08):** switches need investigation
+   before any model is chosen. A small spike should test how well the OS
+   switch systems (Android Switch Access, Apple Switch Control) can drive
+   Dasher in practice, per platform, and the answer may differ by platform.
+   Until then this RFC commits to neither approach.
 3. **UDP gaze protocol.** **Open.** Is Windows's existing format the right
    cross-platform standard, or define a cleaner JSON/binary format?
 4. **Android eye-gaze path.** **Open.** Camera Switch presents as an

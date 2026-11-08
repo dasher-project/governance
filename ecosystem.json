@@ -1,41 +1,41 @@
 {
-  "updated": "2026-11-07T08:25:11Z",
+  "updated": "2026-11-08T16:11:03Z",
   "engine": {
     "latest": "v0.2.28",
     "capi_version": 3
   },
   "frontends": {
     "dasher-android": {
-      "latest": "v0.1.29",
-      "engine_pin": "git-c7899b6527",
+      "latest": "v6.0.0",
+      "engine_pin": "v0.2.26",
       "behind": 7,
-      "shared_resources_pin": "git-1173c53668",
-      "shared_resources_behind": 29
+      "shared_resources_pin": "v0.1.1",
+      "shared_resources_behind": 1
     },
     "dasher-gtk": {
-      "latest": "v0.2.16",
-      "engine_pin": "git-b7117534c8",
-      "behind": 11,
-      "shared_resources_pin": "git-f712b34d16",
-      "shared_resources_behind": 26
+      "latest": "v6.0.0",
+      "engine_pin": "v0.2.28",
+      "behind": 0,
+      "shared_resources_pin": "v0.1.2",
+      "shared_resources_behind": 0
     },
     "dasher-windows": {
       "latest": "v0.1.45",
-      "engine_pin": "git-34a2246e90",
+      "engine_pin": "git-b1987d6e52",
       "behind": 0,
       "shared_resources_pin": "git-f81e428b3c",
-      "shared_resources_behind": 1
+      "shared_resources_behind": 3
     },
     "dasher-apple": {
       "latest": "v0.1.17-mac-beta",
-      "engine_pin": "git-34a2246e90",
+      "engine_pin": "git-b1987d6e52",
       "behind": 0,
-      "shared_resources_pin": "git-cb3c8db5b7",
-      "shared_resources_behind": 16
+      "shared_resources_pin": "v0.1.2",
+      "shared_resources_behind": 0
     },
     "dasher-web": {
       "latest": "v0.2.8",
-      "engine_pin": "git-296eb458ea",
+      "engine_pin": "v0.2.25",
       "behind": 9
     }
   }

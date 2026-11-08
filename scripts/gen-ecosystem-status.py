@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""RFC 0022 item 5: regenerate ecosystem.json — the machine-readable status of
+"""RFC 0023 item 5: regenerate ecosystem.json — the machine-readable status of
 every Dasher v6 frontend (latest release + engine pin + how many engine
 releases behind). Run by .github/workflows/ecosystem-status.yml (weekly + on
 demand); the website can render a status table from this file.
@@ -52,9 +52,31 @@ def engine_tags():
     return tags  # newest first
 
 
+def tag_map(repo_url):
+    """sha → tag name for v* tags, via ls-remote.
+
+    The gitlink sha a superproject records is the COMMIT sha, so for
+    annotated tags map the peeled (^{}) sha, not the tag-object sha.
+    Lightweight tags have no peeled line and map directly.
+    """
+    out = subprocess.run(
+        ["git", "ls-remote", "--tags", repo_url, "v*"],
+        capture_output=True, text=True, check=True).stdout
+    shas, peels = {}, {}
+    for line in out.splitlines():
+        sha, ref = line.split("\t")
+        tag = ref.split("refs/tags/")[1]
+        if tag.endswith("^{}"):
+            peels[tag[:-3]] = sha
+        else:
+            shas[tag] = sha
+    return {peels.get(tag, sha): tag for tag, sha in shas.items()}
+
+
 def main():
     tags = engine_tags()
     latest = tags[0]
+    engine_map = tag_map(f"https://github.com/{ENGINE}.git")
     capi = None
     try:
         import base64
@@ -66,14 +88,16 @@ def main():
         print(f"warning: capi lookup failed: {e}", file=sys.stderr)
 
     dsr_latest = None
+    dsr_map = {}
     try:
-        dsr_tags = subprocess.run(
+        dsr_sorted = subprocess.run(
             ["git", "ls-remote", "--tags", "--sort=-v:refname",
              "https://github.com/dasher-project/dasher-shared-resources.git", "v*"],
             capture_output=True, text=True, check=True).stdout
-        dsr_lines = [l.split("refs/tags/")[1] for l in dsr_tags.splitlines()
+        dsr_lines = [l.split("refs/tags/")[1] for l in dsr_sorted.splitlines()
                      if not l.rstrip().endswith("^{}")]
         dsr_latest = dsr_lines[0] if dsr_lines else None
+        dsr_map = tag_map("https://github.com/dasher-project/dasher-shared-resources.git")
     except Exception:
         pass
 
@@ -87,11 +111,9 @@ def main():
             pass  # no releases yet
         try:
             pin_sha = api(f"repos/dasher-project/{repo}/contents/{sub}")["sha"]
-            # Tag name if the pin is a tag; short sha otherwise
-            try:
-                entry["engine_pin"] = api(f"repos/{ENGINE}/git/tags/{pin_sha}")["tag"]
-            except Exception:  # noqa: BLE001
-                entry["engine_pin"] = f"git-{pin_sha[:10]}"
+            # Tag name if the pin points at a tag (the ls-remote map handles
+            # both lightweight and annotated tags); short sha otherwise.
+            entry["engine_pin"] = engine_map.get(pin_sha) or f"git-{pin_sha[:10]}"
             # Engine commits between the pin and latest, via the compare API:
             # compare/{pin}...{latest} — ahead_by = commits `latest` has that
             # `pin` lacks (backwards-looking names; this is the drift number).
@@ -104,10 +126,7 @@ def main():
         if ssub:
             try:
                 sha = api(f"repos/dasher-project/{repo}/contents/{ssub}")["sha"]
-                try:
-                    pin = api(f"repos/dasher-project/dasher-shared-resources/git/tags/{sha}")["tag"]
-                except Exception:  # noqa: BLE001
-                    pin = f"git-{sha[:10]}"
+                pin = dsr_map.get(sha) or f"git-{sha[:10]}"
                 entry["shared_resources_pin"] = pin
                 if dsr_latest:
                     cmp2 = api(f"repos/dasher-project/dasher-shared-resources/compare/{sha}...{dsr_latest}")

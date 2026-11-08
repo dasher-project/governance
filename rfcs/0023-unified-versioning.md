@@ -217,15 +217,15 @@ Android 29 commits behind, GTK 26, Apple 16, Windows 1.
 - **Date**: 2026-11-08
 - **Decision**: The seven mechanisms are the plan of record; items 2–7 are
   implemented or in flight across the repos. The 6.0.0 aligned cut
-  (item 1) awaits a maintainer timing decision.
-
-Open sub-question: the timing of the 6.0.0 aligned cut (item 1).
+  (item 1) is GO: the first train leaves when each frontend is ready —
+  GTK cut 6.0.0 on 2026-11-08; others board as their pins and notes land
+  (no coupling to store review latency).
 
 ## Rollout
 
 | Step | Item | Repos | Status |
 | --- | --- | --- | --- |
-| 1 | 6.0.0 aligned cut | all | pending a maintainer decision on timing (first train) |
+| 1 | 6.0.0 aligned cut | all | **GTK v6.0.0 tagged 2026-11-08** (engine v0.2.28, tag-scheme guard live); Android/Windows/Apple/web board the train as ready |
 | 2 | engine-bump / shared-deps automation | all frontends | landed: Android #84 (generalised to shared-deps), GTK #100 + #102, web (engine-bump workflow), Windows #108 |
 | 3 | CAPI gate | all + core | landed: Windows #108 and Apple #75, both with tag-driven versioning; Apple retired the `-mac-beta` suffix |
 | 4 | engine_version telemetry | all + core | landed: DasherCore `dasher_get_engine_version`, Android #83, GTK #99, Windows #108, Apple #73 |

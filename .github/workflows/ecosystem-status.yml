@@ -1,6 +1,6 @@
 name: Ecosystem status
 
-# RFC 0022 item 5: regenerate ecosystem.json (frontend releases + engine pins
+# RFC 0023 item 5: regenerate ecosystem.json (frontend releases + engine pins
 # + drift) weekly and on demand. Commits the diff directly to main when the
 # only change is the data (bot identity); opens a PR never — this file is
 # purely derived, nothing to review.
@@ -33,5 +33,5 @@ jobs:
           git config user.email "noreply@dasher.at"
           git diff --quiet ecosystem.json && echo "no change" && exit 0
           git add ecosystem.json
-          git commit -m "chore: regenerate ecosystem.json (RFC 0022 item 5)"
+          git commit -m "chore: regenerate ecosystem.json (RFC 0023 item 5)"
           git push

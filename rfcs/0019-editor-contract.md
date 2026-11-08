@@ -1,37 +1,52 @@
 ---
 rfc: 0019
 title: The editor contract — v5-parity editing for the output pane
-status: proposed
+status: implemented
 platforms: [apple, windows, gtk, android, core]
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-11-08
 ---
 
 # The editor contract — v5-parity editing for the output pane
 
+## Plain-English summary
+
+Dasher is a free tool that lets people who cannot use a keyboard write, by
+zooming in on text they point to with a mouse, their eyes, or a switch. In
+older versions of Dasher, the box where the text appeared worked like a
+normal editor: you could type or paste into it, and clicking in the text
+made Dasher carry on from that spot. This RFC asks for the same behaviour
+in the current version, on every platform. It mainly helps people who fix
+mistakes by hand or type their own words, because Dasher follows what they
+wrote. The work is now done in all four current apps.
+
 ## Summary
 
-Every Dasher v6 frontend's output pane/editor must behave like v5's editor: the
-pane is **editable**, user edits are synchronised back into the engine's edit
-buffer so predictions follow what the user typed or pasted themselves, placing
-the caret (clicking in the text) **re-anchors the model** at that position, and
-a **New** action starts a fresh session by clearing the buffer *and* dropping
-the model's context. All of this runs on engine APIs that already ship
+Every Dasher v6 frontend's output pane/editor must behave like v5's editor.
+The pane is **editable**: user edits are synchronised back into the engine's
+edit buffer, so predictions follow what the user typed or pasted themselves.
+Placing the caret (clicking in the text) **re-anchors the model** at that
+position, and a **New** action starts a fresh session by clearing the buffer
+*and* dropping the model's context. All of this runs on engine APIs that
+already ship
 (`dasher_seed_buffer`, `dasher_set_offset`, the UTF-16/codepoint offset
 converters, `dasher_reset_output_text`, `dasher_reset`); the contract is
 frontend wiring, not new core work.
 
 ## Implementation status
 
-Not yet implemented. Audited September 2026 — both v6 frontends regressed
-against v5:
+Implemented. The September 2026 audit found both desktop frontends regressed
+against v5: Windows shipped a read-only pane (a long-term v5 user reported
+after v0.1.26, "clicked at the end of the word, the canvas didn't move to
+that word like it did in 5"), and GTK accepted input but never synced it
+back. Re-synced 2026-11-08: all four native frontends now ship the contract.
 
 | Platform | State | Notes |
 | --- | --- | --- |
-| Dasher-Windows | Not started (read-only pane) | `MessageArea` is `IsReadOnly`; `dasher_set_offset` has no frontend callers. Reported by a long-term v5 user after v0.1.26: "clicked at the end of the word, the canvas didn't move to that word like it did in 5." |
-| Dasher-GTK | Not started (editable but unsynced) | `Gtk::TextView` accepts user input, but nothing syncs edits back; the next engine update `set_text` silently clobbers user-typed text. No `set_offset`/`seed_buffer` calls exist in `src/`. |
-| Dasher-Apple | Not audited | iOS editor + macOS pane need the same audit. |
-| Dasher-Android | Not audited | IME context (RFC 0008) has its own buffer rules; the editor-contract clauses may map differently. |
+| Dasher-Windows | Implemented | v5-parity editing, caret re-anchor, New, caret-move seeding (#56); seed cap and IME deferral (#64) |
+| Dasher-GTK | Implemented | Synced pane, caret re-anchor, Open seeds (#86); CR-handling fix (#87) |
+| Dasher-Apple | Implemented | #54 |
+| Dasher-Mobile (Android) | Implemented | Editable output field synced with the engine (#40), with `EditorSyncTest` (12 cases) |
 | DasherCore | Complete | Every API this contract needs shipped with the RFC 0015 context work (v0.2.21/v0.2.22) and is covered by engine tests. |
 
 ## Motivation
@@ -39,15 +54,16 @@ against v5:
 v5 shipped a real editor on both desktop frontends:
 
 - **Win32** (`Src/Win32/Widgets/Edit.cpp:482-492`): `CEdit::OnLButtonUp` read
-  the caret via `EM_GETSEL` and called `SetOffset(iStart)` — click a word, the
-  canvas re-targets there, predictions continue from the click. The box was
+  the caret via `EM_GETSEL` and called `SetOffset(iStart)`: click a word, the
+  canvas re-targets there, and predictions continue from the click. The box was
   fully editable.
 - **GTK** (`Src/Gtk2/GtkDasherControl.cpp:210-230` and `dasher_editor.cpp`):
-  `set_offset`, `set_buffer(0)` (**New** — clear + drop context), control-node
+  `set_offset`, `set_buffer(0)` (**New**: clear + drop context), control-node
   `ctrl_move`/`ctrl_delete`, `clear_all_context`.
 
-v6 regressed in two different ways (see Implementation status), and no PR or
-issue exists on either frontend to restore the behaviour. Direct-entry users
+v6 had regressed in two different ways (see Implementation status), and at
+proposal time no PR or issue existed on either frontend to restore the
+behaviour. Direct-entry users
 rarely notice (the pane is hidden); editor-mode users notice immediately,
 because caret-click re-anchoring is v5 muscle memory.
 
@@ -72,12 +88,12 @@ its own sync rules.
      widget's caret index with `dasher_byte_offset_from_utf16` (UTF-16
      widgets) or `dasher_byte_offset_from_codepoints` as appropriate;
    - debouncing is allowed and recommended (e.g. 300 ms after the last edit);
-     the **caret must never be lost** — pure caret moves (selection change,
+     the **caret must never be lost**: pure caret moves (selection change,
      text unchanged) use `dasher_set_offset` immediately, without debounce;
    - IME composition: defer seeding until composition commit.
 
 3. **Caret placement re-anchors the model.** Clicking in the pane (or moving
-   the caret by any means) re-anchors predictions at the caret — v5's
+   the caret by any means) re-anchors predictions at the caret (v5's
    `SetOffset(iStart)` behaviour. Pure caret move → `dasher_set_offset`;
    caret move plus pending text change → one `dasher_seed_buffer` covering
    both.
@@ -92,7 +108,7 @@ its own sync rules.
 
 5. **New = full reset.** A **New** action (toolbar and direct-mode mini-bar)
    clears the buffer **and** drops the model context: `dasher_reset(ctx)`.
-   `dasher_reset_output_text` alone is *not* New — the model would resume
+   `dasher_reset_output_text` alone is *not* New: the model would resume
    mid-sentence (GTK's `DasherBridge::reset()` documents this exact v5
    distinction from `SetBuffer(0)`). Clearing via the buffer-cleared event
    (output event 2) must not inject backspaces.
@@ -122,15 +138,15 @@ its own sync rules.
 
 ### Platform notes
 
-- **Windows** — Avalonia `TextBox`: `IsReadOnly=false`, `UndoLimit=0`;
+- **Windows** (Avalonia `TextBox`): `IsReadOnly=false`, `UndoLimit=0`;
   `CaretIndex` for caret; loop-guard flag around engine-origin `Text` sets
   with explicit caret restore.
-- **GTK** — `Gtk::TextView`: connect `GtkTextBuffer` insert/delete/notify::cursor-position; guard around `set_text` pushes from
-  `OnBufferChange`; **today's behaviour silently destroys user input and
-  should be treated as a bug while this RFC is pending.**
-- **Apple** — audit `DasherEdit` paths per platform (macOS pane, iOS
+- **GTK** (`Gtk::TextView`): connect `GtkTextBuffer` insert/delete/notify::cursor-position; guard around `set_text` pushes from
+  `OnBufferChange`; **the pre-implementation behaviour silently destroyed
+  user input and was treated as a bug until the sync landed (#86)**.
+- **Apple**: audit `DasherEdit` paths per platform (macOS pane, iOS
   keyboard-extension buffer rules differ).
-- **Android** — the IME already owns the target buffer; clauses 1–5 may
+- **Android**: the IME already owns the target buffer; clauses 1–5 may
   reduce to New + reset semantics. Audit before implementing.
 
 ## Drawbacks
@@ -150,7 +166,7 @@ its own sync rules.
 - **Per-frontend ad-hoc behaviour**: the status quo that produced two
   divergent regressions; rejected.
 - **New engine edit-op API** (incremental insert/delete instead of re-seed):
-  unnecessary today — `seed_buffer` is fast enough at realistic sizes and
+  unnecessary today: `seed_buffer` is fast enough at realistic sizes and
   already tested; revisit only if profiling the 100k-char cap says otherwise.
 
 ## Prior art
@@ -158,7 +174,7 @@ its own sync rules.
 - Dasher v5 Win32 `CEdit` (click→`SetOffset`, editable, forward-keyboard
   modes) and v5 GTK `dasher_editor` (bidirectional buffer, control-node
   editing).
-- The RFC 0015 context-awareness tiering (session/field/pre-existing) — this
+- The RFC 0015 context-awareness tiering (session/field/pre-existing): this
   contract extends its trigger set rather than replacing it.
 
 ## Testing
@@ -194,19 +210,24 @@ Per [RFC 0011](./0011-testing.md):
 
 ## Unresolved questions
 
-1. **Open.** Long-document cap: seed trailing N chars — what N? (Proposal:
-   100 000 UTF-16 units, per-frontend override.)
+1. **Open.** Long-document cap: seed trailing N chars. What N? (Proposal:
+   100 000 UTF-16 units, per-frontend override.) Partially addressed on
+   Windows by the seed cap (#64).
 2. **Open.** Editor undo: is `UndoLimit=0` acceptable long-term, or should a
    later amendment specify an undo-aware sync?
 3. **Open.** Android/Apple mapping of clauses 1–5 (audit needed before
    implementation claims).
-4. **Open.** Control-node editing parity (`ctrl_move`/`ctrl_delete`) — in
+4. **Open.** Control-node editing parity (`ctrl_move`/`ctrl_delete`): in
    scope for a future amendment once Control Mode resurfaces in the settings
    IA.
 
 ## Resolution
 
-_(pending — open for discussion)_
+State: implemented.
+Decided by: maintainers.
+Date: 2026-11-08.
+Decision: "All four native frontends now ship the contract; the engine
+primitives landed with the RFC 0015 context work."
 
 ## History
 
@@ -214,3 +235,4 @@ _(pending — open for discussion)_
   following v0.1.26 user feedback; engine primitives shipped with RFC 0015's
   context-awareness amendment (DasherCore v0.2.21/v0.2.22). Includes the
   RFC 0015 clause-8 caret-trigger amendment in the same PR._
+- 2026-11-08 — plain-English summary added, prose simplified for readability, implementation status re-synced against the frontend repos.

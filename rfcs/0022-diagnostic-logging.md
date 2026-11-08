@@ -1,13 +1,17 @@
 ---
 rfc: 0022
 title: Diagnostic logging
-status: proposed
+status: active
 platforms: [windows, apple, gtk, android]   # platforms affected
 created: 2026-11-02
-updated: 2026-11-02
+updated: 2026-11-08
 ---
 
 # Diagnostic logging
+
+## Plain-English summary
+
+Dasher is a free tool that lets people who cannot use a keyboard write, by zooming in on text they point to with a mouse, their eyes, or a switch. When something goes wrong, testers send the developers a log, which is simply a diary of what the app was doing. Today each version of the app keeps that diary in its own way, and one tester's diary grew to 40 megabytes covering every test build ever shipped, which nobody could make sense of. This proposal gives every version of the app one shared diary format, keeps each diary small, and starts a fresh diary with every release. It also adds simple buttons in the app to clear the diary or hand it over to the developers. The plan is now agreed, and the Windows and Apple versions already have it.
 
 ## Summary
 
@@ -24,9 +28,11 @@ spanning every build ever shipped was unparseable for remote debugging.
 | Platform | State | Notes |
 |---|---|---|
 | windows | implemented (PR #82) | LogManager + advanced toggle + rotation + clear |
-| apple | implemented (Dasher-Apple PR #57: LogManager with version-scoped rotation, 10 MB caps, Advanced-logging toggle, [KB] format; PR #66 adds the Export logs affordance — share sheet on iOS/visionOS, Finder reveal on macOS) | |
+| apple | implemented (Dasher-Apple PR #57: LogManager with version-scoped rotation, 10 MB caps, Advanced-logging toggle, [KB] format; PR #66 adds the Export logs affordance: share sheet on iOS/visionOS, Finder reveal on macOS) | |
 | gtk | not started | |
 | android | not started | |
+
+Re-synced 2026-11-08.
 
 ## Motivation
 
@@ -39,13 +45,13 @@ a tester reports a bug, the maintainer needs to know:
 - **That it's readable** (10 MB of unparseable traces is worse than
   10 KB of lifecycle events)
 - **That they can get it** (testers can't navigate %APPDATA% or
-  adb logcat by hand — an in-app export/clear affordance)
+  adb logcat by hand; an in-app export/clear affordance is needed)
 
 Heide's v0.1.36 report: a 40 MB `keyboard_debug.log` accumulated across
 every build since diagnostics were introduced, mixing pre- and post-fix
-behaviour, making it impossible to tell whether a fix worked without
-manual timestamp archaeology. The paragraph-fix investigation (PR #79)
-required isolating the "latest session" by finding gaps in the log —
+behaviour. It was impossible to tell whether a fix worked without manual
+timestamp archaeology. The paragraph-fix investigation (PR #79)
+required isolating the "latest session" by finding gaps in the log,
 a heuristic that breaks when sessions overlap.
 
 ## Detailed design
@@ -63,8 +69,8 @@ a heuristic that breaks when sessions overlap.
 [KB] HH:MM:SS.mmm <message>
 ```
 
-- `HH:MM:SS.mmm` — wall-clock local time with millisecond precision
-- `<message>` — free text; see the indentation convention below
+- `HH:MM:SS.mmm`: wall-clock local time with millisecond precision
+- `<message>`: free text; see the indentation convention below
 
 Additional writers may use category prefixes inside the message
 (`[UIA]`, `[Win32]`, `[tracker]`, `[Ctx]`).
@@ -82,7 +88,7 @@ Every diagnostic log line is either **lifecycle** or **verbose**:
   per-frame timing diagnostics. These generate megabytes during active
   use.
 
-The convention: **verbose lines are indented with a two-space prefix**;
+The convention: verbose lines are indented with a two-space prefix;
 lifecycle lines start at column 0. This makes the gate a one-line check
 per writer method, and makes the log visually scannable (dense indented
 blocks = verbose sections).
@@ -101,11 +107,11 @@ logging for bug reports. Basic connection events are always logged.
 May generate large log files."*
 
 The toggle controls ALL verbose logging (keyboard traces, eye-tracker
-per-sample, UIA internals) — one switch, not per-subsystem.
+per-sample, UIA internals). One switch, not per-subsystem.
 
 ### Rotation on version change
 
-At startup, **before any log writes**:
+At startup, before any log writes:
 
 1. Read the last-version marker (`last_version.txt` in the log dir).
 2. If the app version has changed: rename each live log to
@@ -115,14 +121,14 @@ At startup, **before any log writes**:
 4. Write the current version to the marker.
 
 **Version identity**: use the informational/marketing version (the one
-users see), not the assembly version — AssemblyVersion is often `0.0.0`
-or `1.0.0` in dev builds, which would make every local run "the same
+users see), not the assembly version. AssemblyVersion is often `0.0.0` or
+`1.0.0` in dev builds, which would make every local run "the same
 version" and never rotate.
 
 ### Size caps and truncation
 
 - **Cap**: 10 MB per log file.
-- **Truncation**: at the NEXT startup (never mid-write — that would
+- **Truncation**: at the NEXT startup (never mid-write; that would
   corrupt a line), truncate to the last 1000 lines. This runs BEFORE
   rotation so an oversized live log doesn't become an oversized archive.
 - **Archives**: subject to the same cap (a pre-existing 40 MB archive
@@ -150,7 +156,7 @@ Testers can't be expected to navigate `%APPDATA%\Dasher` or run
 ## Drawbacks
 
 - The two-space indent convention is a social contract, not a type
-  system — a new writer that doesn't follow it leaks verbose lines past
+  system: a new writer that doesn't follow it leaks verbose lines past
   the gate. Mitigated by code review and the convention being cheap
   to apply.
 - Wall-clock timestamps are not monotonic (NTP adjustments). For
@@ -167,10 +173,10 @@ Testers can't be expected to navigate `%APPDATA%\Dasher` or run
   logs to describe what they saw. Free-text with the timestamp/indent
   convention is the right balance.
 - **Per-subsystem toggles** (keyboard verbose, eyegaze verbose
-  separately): rejected — one switch is simpler for testers and the
+  separately): rejected; one switch is simpler for testers and the
   advanced-logging use case (full detail for a bug report) always wants
   everything.
-- **Log rotation by time (daily/weekly)**: rejected — version-scoped
+- **Log rotation by time (daily/weekly)**: rejected; version-scoped
   rotation is strictly better for the "which build produced this"
   question, and time-based rotation would split a single session
   across files.
@@ -181,8 +187,8 @@ Testers can't be expected to navigate `%APPDATA%\Dasher` or run
   reports is a separate, in-memory concern; this RFC covers the
   on-disk diagnostic files that testers send.
 - Android's `logcat` verbosity levels (V/D/I/W/E): the
-  lifecycle/verbose split is a deliberate simplification to two levels
-  — the field lesson is that testers don't distinguish five levels.
+  lifecycle/verbose split is a deliberate simplification to two levels.
+  The field lesson is that testers don't distinguish five levels.
 
 ## Unresolved questions
 
@@ -192,6 +198,9 @@ Testers can't be expected to navigate `%APPDATA%\Dasher` or run
   frontend diagnostic files capture the frontend-side interaction.
 - Should there be an in-app "Export logs" (zip the dir) alongside
   Clear? Heide's zip upload worked; automating it would be better.
+  **Resolved (2026-11-08).** Apple shipped Export logs in #66 (share
+  sheet on iOS/visionOS, Finder reveal on macOS); other platforms
+  follow.
 
 ## Testing
 
@@ -201,3 +210,21 @@ Testers can't be expected to navigate `%APPDATA%\Dasher` or run
   toggle on/off.
 - **Cross-platform (manual)**: verify each platform's log format matches
   (timestamp, indent convention) by comparing a sample from each.
+
+## Resolution
+
+- **State**: accepted
+- **Decided by**: maintainers
+- **Date**: 2026-11-08
+- **Decision**: The shared log format, two-level verbosity, and
+  version-scoped rotation are the plan of record. Implemented on Windows
+  (#82) and Apple (#57, #66); GTK and Android remain open.
+
+Open sub-question: whether the engine (DasherCore) should also write to
+these files, or the RFC 0009 ring buffer is sufficient (Unresolved
+question 1).
+
+## History
+
+- 2026-11-08 — noted: several November 2026 frontend commits cite "RFC 0022 item 2/4/6/7" for the release-process mechanisms that governance numbers as RFC 0023 items; the drafts were renumbered after those commits merged.
+- 2026-11-08 — plain-English summary added, prose simplified for readability, implementation status re-synced against the frontend repos.

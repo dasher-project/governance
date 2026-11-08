@@ -4,10 +4,21 @@ title: "Dasher v5 → v6 migration: settings, alphabets, and user data"
 status: implemented
 platforms: [apple, windows, gtk]
 created: 2026-06-18
-updated: 2026-08-21
+updated: 2026-11-08
 ---
 
 # Dasher v5 → v6 migration: settings, alphabets, and user data
+
+## Plain-English summary
+
+Dasher is a free tool that lets people who cannot use a keyboard write, by
+zooming in on text they point to with a mouse, their eyes, or a switch. Many
+long-time users have spent years getting it just right for them: their typing
+speed, their colours, their own word lists. This proposal makes sure that when
+they move to the new version of Dasher, all of that carries over automatically
+the first time they open it. They are asked first, and can bring their settings
+across later if they prefer to wait. This is built and shipping on Mac and
+Windows.
 
 ## Summary
 
@@ -36,9 +47,9 @@ that had a v5 predecessor.
 
 ## Motivation
 
-Dasher v5 has been the stable release for over a decade. Users — many of
+Dasher v5 has been the stable release for over a decade. Users, many of
 whom are people with disabilities who have invested significant effort
-tuning their Dasher configuration — will lose years of personalisation
+tuning their Dasher configuration, will lose years of personalisation
 if v6 starts from defaults. Specifically:
 
 - **Speed settings**: A user's `MaxBitRateTimes100` is highly personal
@@ -57,7 +68,7 @@ if v6 starts from defaults. Specifically:
   are tightly coupled to the user's workflow.
 
 Without migration, v6 adoption will be painful for the most vulnerable
-users — exactly the population Dasher exists to serve.
+users, exactly the population Dasher exists to serve.
 
 ## Detailed design
 
@@ -74,15 +85,15 @@ users — exactly the population Dasher exists to serve.
 These are **directory names**, not files (confirmed from
 `dasher/Src/Win32/Dasher.cpp:212-228`):
 
-- **`system.rc\`** — appended to the application's install directory.
+- **`system.rc\`**: appended to the application's install directory.
   Contains alphabet XML, colour XML, control XML, training text. This is
   the v5 equivalent of the app bundle's `Resources/` on macOS.
-- **`dasher.rc\`** — appended to `%APPDATA%\`. Contains `settings.xml`
+- **`dasher.rc\`**: appended to `%APPDATA%\`. Contains `settings.xml`
   and any user-modified XML/training files. This is the v5 equivalent of
   `~/Library/Application Support/Dasher/` on macOS.
 
-On macOS and Linux, there is no `system.rc`/`dasher.rc` directory —
-those platforms use the standard paths listed above. The README in the
+On macOS and Linux, there is no `system.rc`/`dasher.rc` directory.
+Those platforms use the standard paths listed above. The README in the
 `DasherSmoothSaling` repository references these Windows paths because
 Steve Saling's configuration was created on Windows.
 
@@ -115,7 +126,7 @@ Binary plist at
 Keys are the same `regName` strings. Values are stored as native
 plist types (`NSNumber` for bool/long, `NSString` for string). Since v6
 has a different bundle ID (`at.dasher.Dasher.macOS`), v6 cannot use
-`NSUserDefaults` to read v5 values directly — it must read the plist
+`NSUserDefaults` to read v5 values directly. It must read the plist
 file from disk via `NSDictionary(contentsOfFile:)`.
 
 **Platform-specific keys** in the v5 plist (not in `settings.xml`):
@@ -125,7 +136,7 @@ file from disk via `NSDictionary(contentsOfFile:)`.
 `ScreenHeightH`, `ScreenWidth`, `ScreenWidthH`, `TimeStampNewFiles`,
 `ToolbarID`, `ViewStatusbar`, `ViewToolbar`, `WindowState`, `XPosition`,
 `YPosition`, `ConfirmUnsavedFiles`. These are UI/layout settings specific
-to the v5 Cocoa app and have no v6 equivalent — they are silently
+to the v5 Cocoa app and have no v6 equivalent. They are silently
 ignored during migration.
 
 ### Parameter mapping
@@ -159,13 +170,13 @@ semantics. They are read from v5 storage and applied directly via
 | `AutoSpeedControl` | `BP_AUTO_SPEEDCONTROL` | |
 | `LMAdaptive` | `BP_LM_ADAPTIVE` | |
 | `NonlinearY` | `BP_NONLINEAR_Y` | |
-| `PauseOutside` | `BP_STOP_OUTSIDE` | regName changed from `PauseOutside` to `StopOutside` in v6 — **map by enum, not regName** |
+| `PauseOutside` | `BP_STOP_OUTSIDE` | regName changed from `PauseOutside` to `StopOutside` in v6 (**map by enum, not regName**) |
 | `BackoffButton` | `BP_BACKOFF_BUTTON` | |
 | `TwoButtonReverse` | `BP_TWOBUTTON_REVERSE` | |
 | `TwoButtonInvertDouble` | `BP_2B_INVERT_DOUBLE` | |
 | `SlowStart` | `BP_SLOW_START` | |
-| `CopyOnStop` | `BP_COPY_ALL_ON_STOP` | regName changed — **map by enum** |
-| `SpeakOnStop` | `BP_SPEAK_ALL_ON_STOP` | regName changed — **map by enum** |
+| `CopyOnStop` | `BP_COPY_ALL_ON_STOP` | regName changed (**map by enum**) |
+| `SpeakOnStop` | `BP_SPEAK_ALL_ON_STOP` | regName changed (**map by enum**) |
 | `SpeakWords` | `BP_SPEAK_WORDS` | |
 | `SlowControlBox` | `BP_SLOW_CONTROL_BOX` | |
 
@@ -193,7 +204,7 @@ unchanged `regName` and compatible semantics. Notable examples:
 |---|---|---|
 | `AlphabetID` | `SP_ALPHABET_ID` | |
 | `ColourID` | `SP_COLOUR_ID` | Empty string in v5 → leave as v6 default |
-| `DasherFont` | `SP_DASHER_FONT` | Font may not exist on v6 system — see "Fonts" |
+| `DasherFont` | `SP_DASHER_FONT` | Font may not exist on v6 system (see "Fonts") |
 | `GameTextFile` | `SP_GAME_TEXT_FILE` | |
 | `InputFilter` | `SP_INPUT_FILTER` | |
 | `InputDevice` | `SP_INPUT_DEVICE` | Case difference: v5 "Mouse Input" vs v6 "Mouse input" |
@@ -243,10 +254,10 @@ These v5 parameters have no v6 equivalent and are silently ignored:
 
 - `BP_MOUSEPOS_MODE` → migrated as `LP_START_MODE` (see above)
 - `BP_CIRCLE_START` → migrated as `LP_START_MODE` (see above)
-- `BP_SOCKET_DEBUG`, `BP_GLOBAL_KEYBOARD` — dropped
-- `LP_YSCALE` — dropped
-- `SP_CONTROL_BOX_ID` — ControlManager now uses `control.xml`
-- `SP_SOCKET_INPUT_X_LABEL`, `SP_SOCKET_INPUT_Y_LABEL` — dropped
+- `BP_SOCKET_DEBUG`, `BP_GLOBAL_KEYBOARD`: dropped
+- `LP_YSCALE`: dropped
+- `SP_CONTROL_BOX_ID`: ControlManager now uses `control.xml`
+- `SP_SOCKET_INPUT_X_LABEL`, `SP_SOCKET_INPUT_Y_LABEL`: dropped
 - `SP_JOYSTICK_DEVICE` → replaced by `SP_JOYSTICK_XAXIS` + `SP_JOYSTICK_YAXIS`
 - All platform-only UI settings (window position, edit font, etc.)
 
@@ -257,7 +268,7 @@ the feature. These should be surfaced in Settings > Migration as
 "planned for a future update" so users know they haven't been
 permanently removed.
 
-In practice, v5's settings UI was very limited — most users only
+In practice, v5's settings UI was very limited: most users only
 changed a handful of values (alphabet, speed, colour, control mode).
 The settings XML contains many values but most were never exposed in
 the v5 preferences panel and remain at their defaults. The main
@@ -265,7 +276,7 @@ categories of genuinely-missing functionality are:
 
 | v5 feature | Status in v6 | Migration action | Future plan |
 |---|---|---|---|
-| Custom control trees (`control.*.xml`) | Same DTD — fully compatible | Copy as-is | N/A (already works) |
+| Custom control trees (`control.*.xml`) | Same DTD (fully compatible) | Copy as-is | N/A (already works) |
 | Socket/network input | Not implemented | Skip | Future RFC for network input |
 | Joystick device path | Replaced by axis-based config | Skip | Implement when joystick support is added |
 | Window position / fullscreen | OS-managed in v6 | Skip | N/A (different paradigm) |
@@ -286,17 +297,17 @@ first-impressions report (2026-08) where a v5 user's speed was unreachable and
 
 1. **Speed controls must accept the full v5 range.** v5's UI offered
    0.1–8.0 (`MaxBitRateTimes100` = raw 10–800; Steve Saling's 700 is a real
-   value). Migration must write `LP_MAX_BITRATE` **directly** — the
+   value). Migration must write `LP_MAX_BITRATE` directly: the
    `dasher_set_speed_percent` helper clamps to 20–400 %, i.e. raw 32–640,
-   which silently truncates the top of v5's range — and every speed control
+   which silently truncates the top of v5's range. Every speed control
    (footer spinners, mini-bars) must accept at least raw 10–800, taking its
    range from the engine manifest rather than hardcoding. Dasher-GTK's footer
    capped at 400 until [Dasher-GTK #51](https://github.com/dasher-project/Dasher-GTK/pull/51);
    the engine manifest allows 1–1000.
 2. **"New" is a full reset.** v5's New cleared the editor *and* dropped the
    prediction context (via `SetBuffer(0)`). The v6 equivalent is
-   `dasher_reset()` (clear text **and** restart the model), not
-   `dasher_reset_output_text()` (clear text, keep the learned position — the
+   `dasher_reset()` (clear text and restart the model), not
+   `dasher_reset_output_text()` (clear text, keep the learned position: the
    canvas resumes mid-sentence). Dasher-Windows and Dasher-Apple already did
    this; Dasher-GTK was aligned in #51. "Open file" keeps using the softer
    `dasher_reset_output_text()`.
@@ -460,9 +471,9 @@ Settings > Migration
 Migration must run **before** `dasher_set_screen_size()` (which triggers
 `Realize()` and starts the engine). The flow is:
 
-1. `dasher_create()` — engine created but not realised
-2. **Migration runs here** — reads v5 data, calls `dasher_set_*_parameter()`
-3. `dasher_set_screen_size()` — engine realises with migrated settings
+1. `dasher_create()`: engine created but not realised
+2. **Migration runs here:** reads v5 data, calls `dasher_set_*_parameter()`
+3. `dasher_set_screen_size()`: engine realises with migrated settings
 4. UI renders with the user's familiar configuration
 
 ### Per-platform implementation notes
@@ -481,7 +492,7 @@ The migration code lives in `DasherShared/` and runs only on macOS.
 - Read `~/Library/Preferences/uk.ac.cam.phy.inference.dasher.plist`
   via `NSDictionary(contentsOfFile:)`.
 - Copy files from `~/Library/Application Support/Dasher/` (same path
-  in v6 — no directory change needed).
+  in v6, no directory change needed).
 
 The migration is triggered from the app's `init()` before the engine is
 created, or from a dedicated `MigrationService` called during launch.
@@ -499,7 +510,7 @@ created, or from a dedicated `MigrationService` called during launch.
 
 #### GTK (Dasher-GTK)
 
-**Scope: Deferred — needs investigation.**
+**Scope: Deferred (needs investigation).**
 
 Linux/GTK paths and settings format have not yet been verified against
 the v5 GTK source code. The expected paths are:
@@ -517,10 +528,10 @@ real-world migration:
 
 | v5 setting | v5 value | v6 action |
 |---|---|---|
-| `AlphabetID` | `English with everything incl Emojis` | Set SP_ALPHABET_ID — alphabet XML must be imported |
-| `ColourID` | `EurasianDarkMode` | Set SP_COLOUR_ID — colour XML must be imported |
-| `ControlBoxID` | `!Spk-Del-Mov-Stp` | Set BP_CONTROL_MODE = true — control XML copied as-is |
-| `DasherFont` | `Alaska` | Set SP_DASHER_FONT — font TTF must be installed separately |
+| `AlphabetID` | `English with everything incl Emojis` | Set SP_ALPHABET_ID (alphabet XML must be imported) |
+| `ColourID` | `EurasianDarkMode` | Set SP_COLOUR_ID (colour XML must be imported) |
+| `ControlBoxID` | `!Spk-Del-Mov-Stp` | Set BP_CONTROL_MODE = true (control XML copied as-is) |
+| `DasherFont` | `Alaska` | Set SP_DASHER_FONT (font TTF must be installed separately) |
 | `MaxBitRateTimes100` | `700` | Set LP_MAX_BITRATE = 700 (7.0x speed) |
 | `ControlMode` | `True` | Set BP_CONTROL_MODE = true |
 | `CopyOnStop` | `True` | Set BP_COPY_ALL_ON_STOP = true |
@@ -592,7 +603,7 @@ because it allows v6 to evolve its storage independently.
   an automated migration (users had to reconfigure). This was a common
   complaint.
 - **Browser migrations**: Firefox, Chrome, and Safari all detect each
-  other and offer to import bookmarks/history on first launch — a very
+  other and offer to import bookmarks/history on first launch: a very
   similar UX pattern.
 
 ## Test matrix
@@ -643,3 +654,4 @@ because it allows v6 to evolve its storage independently.
 - _2026-08-21_ — _added "Behaviour parity beyond settings" (speed-range floor
   of raw 10–800, New = full reset) after a v6 first-impressions report;
   see [Dasher-GTK #51](https://github.com/dasher-project/Dasher-GTK/pull/51)_
+- 2026-11-08 — plain-English summary added, prose simplified for readability, implementation status re-synced against the frontend repos.

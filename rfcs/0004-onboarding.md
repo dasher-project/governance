@@ -4,24 +4,36 @@ title: First-run onboarding experience
 status: proposed
 platforms: [apple, windows, gtk, android, core]
 created: 2026-06-17
-updated: 2026-08-01
+updated: 2026-11-08
 ---
 
 # First-run onboarding experience
 
+## Plain-English summary
+
+Dasher is a free tool that lets people who cannot use a keyboard write, by
+zooming in on text they point to with a mouse, their eyes, or a switch. It is
+powerful but hard to start using: new users often feel lost or even queasy the
+first time they open it, and many give up. This proposal suggests a short
+guided introduction when someone first opens the app, so they can learn the
+basics before writing. It draws on expert help and user testing before anything
+is built, because we do not yet know what works best. It would help new users,
+and the caregivers who set Dasher up for them. This is still at the ideas
+stage.
+
 ## Summary
 
-Dasher has a notoriously steep learning curve — new users frequently describe
+Dasher has a notoriously steep learning curve. New users frequently describe
 the initial experience as "sea-sickness inducing" (per the design guide §1).
 No v6 frontend implements any onboarding; all three launch directly into the
 live editor. The design guide §8 defines an aspirational scaffolded flow
 (welcome → input handshake → first zoom challenge → progress dashboard), and
 DasherCore has a functional Game Mode engine (`CGameModule`) and a disabled
-Demo Filter (`CDemoFilter`) — **however `CDemoFilter` has since been removed
-from DasherCore** (commit `f79eb6a9`, Jun 2026; it had been disabled since 2007
+Demo Filter (`CDemoFilter`). However, `CDemoFilter` has since been removed
+from DasherCore (commit `f79eb6a9`, Jun 2026; it had been disabled since 2007
 due to segfaults and was never re-enabled). This RFC frames the onboarding
 problem, documents what exists, identifies the design questions that need
-**UX expert input**, and proposes a phased implementation plan.
+UX expert input, and proposes a phased implementation plan.
 
 ## Implementation status
 
@@ -38,13 +50,17 @@ but the user invokes it at any time. It is never triggered on first launch.
 This RFC still needs UX research before it can move out of `proposed` (see
 "Design questions needing UX expert input").
 
+The dasher-web playground ships an always-available game-mode practice overlay
+(August 2026 "RFC rounds" work). That is practice material, not a first-run
+onboarding flow.
+
 ## Motivation
 
 ### The core problem
 
 Dasher's zooming text-entry paradigm is unlike any other input method. A new
 user opening the app for the first time sees a canvas of letters zooming toward
-a cursor point — with no explanation of how to control it, what the goal is, or
+a cursor point, with no explanation of how to control it, what the goal is, or
 how to adjust speed. The result is predictable: high abandonment.
 
 The design guide identifies this explicitly:
@@ -67,16 +83,16 @@ The design guide identifies this explicitly:
 **Game Mode** is the closest thing to onboarding that exists. All three
 frontends can enter it via a toolbar/footer button, and DasherCore's
 `CGameModule` provides target text, progress feedback, and a directional arrow.
-But it's user-invoked at any time — never triggered on first launch, and not
+But it's user-invoked at any time, never triggered on first launch, and not
 part of any guided sequence.
 
 **CDemoFilter** ("Demo Mode (no input)") was an automated cursor driver that
 could show users how Dasher works without requiring them to control it. It is
-**no longer in DasherCore** — removed in commit `f79eb6a9` (Jun 2026) after
+no longer in DasherCore: removed in commit `f79eb6a9` (Jun 2026) after
 being disabled since 2007 due to segfaults. The three `LP_DEMO_*` parameters
 that drove it were removed at the same time. Whether onboarding needs a passive
-"watch how it works" step at all — and if so what serves it best — is a **UX
-research question**, not a foregone conclusion (see "DasherCore changes
+"watch how it works" step at all, and if so what serves it best, is a UX
+research question, not a foregone conclusion (see "DasherCore changes
 needed" below).
 
 ### What the design guide proposes (§8)
@@ -89,21 +105,21 @@ The design guide defines a four-stage flow:
 
 With specific beginner-mode canvas behaviours:
 
-1. **Sibling Box Suppression** — show sibling boxes but hide their children to
+1. **Sibling Box Suppression:** show sibling boxes but hide their children to
    reduce visual load.
-2. **Color Harmonization** — group siblings in muted monochromatic hues.
-3. **Dynamic Pink Path Correction** — a correction arrow that guides the user
+2. **Color Harmonization:** group siblings in muted monochromatic hues.
+3. **Dynamic Pink Path Correction:** a correction arrow that guides the user
    toward the correct letter, fading as they approach, with auto-slow when they
    drift off-path.
-4. **Stats & Milestones** — WPM, accuracy, and unlock badges (e.g. "Smooth
+4. **Stats & Milestones:** WPM, accuracy, and unlock badges (e.g. "Smooth
    Steerer") at the end of a training sequence.
 
-This is a strong vision but **none of it has been validated with users or
-implemented**. Several questions need UX research before building.
+This is a strong vision, but none of it has been validated with users or
+implemented. Several questions need UX research before building.
 
 ## Design questions needing UX expert input
 
-This RFC deliberately does **not** prescribe all the answers. The following
+This RFC deliberately does not prescribe all the answers. The following
 questions require UX research, user testing, or expert consultation:
 
 ### Q1. How many steps before the user is "in"?
@@ -118,7 +134,7 @@ motor abilities may need more or fewer steps. Key sub-questions:
   guided target (Game Mode)?
 - Can onboarding be interrupted and resumed, or must it complete in one session?
 
-### Q2. Speed calibration — automatic or guided?
+### Q2. Speed calibration: automatic or guided?
 
 Dasher's speed (`LP_MAX_BITRATE`) determines how fast the canvas zooms. Too fast
 = overwhelming; too slow = boring. Currently it's a manual slider with no
@@ -128,7 +144,7 @@ Options:
 - **Guided calibration:** Show a short phrase, ask the user to type it, measure
   completion time, auto-set speed. (Similar to typing-test calibration.)
 - **Progressive speed:** Start slow, gradually increase as the user demonstrates
-  control. (Requires engine support — a ramp-up parameter?)
+  control. (Requires engine support: a ramp-up parameter?)
 - **Auto-speed control:** DasherCore already has `BP_AUTO_SPEEDCONTROL`. Should
   onboarding enable it by default and disable it once the user is proficient?
 
@@ -141,7 +157,7 @@ A mouse user, an eye-tracker user, and a switch user have fundamentally
 different onboarding needs:
 
 - **Mouse/touch:** Point and hold. Intuitive for most users.
-- **Eye gaze:** No clicking — dwell-based. Needs explanation that *looking* is
+- **Eye gaze:** No clicking (dwell-based). Needs explanation that *looking* is
   *selecting*. Many users don't realise their eye movements are being tracked
   as input.
 - **Switch:** Timed scanning. Completely different mental model from pointing.
@@ -150,7 +166,7 @@ different onboarding needs:
 Should onboarding detect the active input method and adapt? Or show a generic
 "how Dasher works" animation first, then input-specific practice?
 
-### Q4. Sibling suppression and path correction — effective or patronising?
+### Q4. Sibling suppression and path correction: effective or patronising?
 
 The design guide proposes hiding child nodes and showing a pink correction
 arrow. But:
@@ -163,14 +179,14 @@ arrow. But:
 
 This needs A/B testing with real users.
 
-### Q5. Gamification — motivating or childish?
+### Q5. Gamification: motivating or childish?
 
 The design guide proposes badges ("Smooth Steerer") and WPM/accuracy stats. For
 an assistive technology used by adults with disabilities, this could feel
 patronising. On the other hand, gamification is proven to help skill acquisition.
 
 UX question: should gamification be opt-in, age-dependent, or always present?
-What's the right tone — celebratory but not childish?
+What's the right tone (celebratory but not childish)?
 
 ### Q6. Onboarding vs. always-available tutorial
 
@@ -196,7 +212,7 @@ alphabet being practiced.
 1. **Engage a UX consultant** to validate the design guide §8 proposals.
 2. **User testing** with 3-5 first-time Dasher users per input method
    (mouse, eye gaze, switch) to observe where they get stuck.
-3. **Review competitor onboarding** — how do Tobii Communicator, Grid 3,
+3. **Review competitor onboarding:** how do Tobii Communicator, Grid 3,
    Proloquo2Go, and other AAC tools handle first-run?
 4. **Audit the UX background decks** (`dasher-design-guide/ux-background/`) with
    the consultant.
@@ -221,16 +237,16 @@ text needs to be localised (RFC 0003).
 
 Wire the existing `CGameModule` into a structured practice sequence:
 
-1. **Step 1 — "Find the letter H":** Single target letter. Canvas zooms slowly.
+1. **Step 1 ("Find the letter H"):** Single target letter. Canvas zooms slowly.
    Pink arrow guides. Sibling children suppressed.
-2. **Step 2 — "Type 'HI':** Two letters. Slightly faster.
-3. **Step 3 — "Type 'HELLO':** Full word. Full speed (with auto-speed control).
-4. **Step 4 — Progress dashboard:** Show WPM, accuracy, time. Offer "Practice
+2. **Step 2 ("Type 'HI'"):** Two letters. Slightly faster.
+3. **Step 3 ("Type 'HELLO'"):** Full word. Full speed (with auto-speed control).
+4. **Step 4 (Progress dashboard):** Show WPM, accuracy, time. Offer "Practice
    more" or "Start typing."
 
 Each step should be skippable. Progress is saved so users can resume.
 
-This sequence is **not** input-method-specific in Phase 2 — it uses whatever
+This sequence is not input-method-specific in Phase 2. It uses whatever
 input method is currently active. Phase 3 adds per-method adaptation.
 
 ### Phase 3: Input-method-aware onboarding
@@ -254,39 +270,39 @@ If UX research (Q3) determines that per-method guidance is needed:
 ### DasherCore changes needed
 
 > **Research-led caveat.** The table below inventories what exists today and
-> what *might* be required. It is **not a build spec.** The onboarding design —
+> what *might* be required. It is not a build spec. The onboarding design,
 > including whether Game Mode is the right practice vehicle at all, and whether
-> any passive demonstration (the old `CDemoFilter` concept) is even needed — is
-> an **output of the UX research** (RFC 0004's reason for being). The research
+> any passive demonstration (the old `CDemoFilter` concept) is even needed, is
+> an output of the UX research (RFC 0004's reason for being). The research
 > may well propose a mechanism that replaces or bypasses several rows here.
 
 | Feature | Status | What might be needed (pending research) |
 | --- | --- | --- |
 | `CGameModule` (target text, progress, arrow) | Functional | *Hypothesis:* a guided game-mode sequence is the practice vehicle. To validate: expose target text / progress via C API for prototype dashboards. Research may propose something different. |
 | Passive "watch how it works" demo | **Removed** (`CDemoFilter` deleted in `f79eb6a9`; disabled since 2007) | Only if research shows a passive step helps. Options: a pre-recorded video clip (no engine work), or a fresh auto-driver built to the current codebase. The old filter is **not** to be resurrected. |
-| Sibling suppression | Not implemented | New boolean parameter (e.g. `BP_BEGINNER_MODE`) that hides child nodes — if research validates a beginner mode. |
+| Sibling suppression | Not implemented | New boolean parameter (e.g. `BP_BEGINNER_MODE`) that hides child nodes (if research validates a beginner mode). |
 | Path correction arrow | Partial (GameModule has a help arrow) | Generalise only if the chosen design needs it outside Game Mode. |
 | Auto-speed ramp | `BP_AUTO_SPEEDCONTROL` exists | Evaluate whether it's sufficient for onboarding or needs a dedicated ramp parameter. |
-| Progress metrics (WPM, accuracy) | Not exposed | New C API calls — only if the validated design includes a dashboard. |
+| Progress metrics (WPM, accuracy) | Not exposed | New C API calls (only if the validated design includes a dashboard). |
 
 ### Per-platform implementation
 
 #### Apple
 
-- `OnboardingView.swift` — SwiftUI view with `TabView` for multi-step flow.
+- `OnboardingView.swift`: SwiftUI view with `TabView` for multi-step flow.
 - `@AppStorage("hasOnboarded")` for first-launch detection.
 - Reuse `TiltCalibrationView` and `SwitchCaptureView` within the flow.
 - Game Mode practice via `DasherViewModel.enterGameMode()`.
 
 #### Windows
 
-- `OnboardingWindow.axaml` — Avalonia window with `Carousel` for multi-step.
+- `OnboardingWindow.axaml`: Avalonia window with `Carousel` for multi-step.
 - `AnalyticsService.HasPrompted` pattern extended to `Settings.HasOnboarded`.
 - Game Mode practice via existing Game Mode infrastructure.
 
 #### GTK
 
-- `OnboardingWindow.cpp` — `Gtk::Assistant` (GTK's built-in wizard widget) or
+- `OnboardingWindow.cpp`: `Gtk::Assistant` (GTK's built-in wizard widget) or
   a custom `Gtk::Box` with page transitions.
 - First-launch flag via `Glib::KeyFile` or `GSettings`.
 - Game Mode practice via `DasherController` / `CScreenGameModule`.
@@ -311,13 +327,13 @@ If UX research (Q3) determines that per-method guidance is needed:
 
 ### No onboarding (status quo)
 
-Ship without onboarding. Rejected — the learning curve is the #1 reason users
+Ship without onboarding. Rejected: the learning curve is the #1 reason users
 abandon Dasher, and competitors (Grid 3, Tobii) all have guided setup.
 
 ### Video tutorial only
 
 Ship a "How to use Dasher" video on the welcome screen, no interactive practice.
-Simpler to build but passive — users learn Dasher by doing, not watching.
+Simpler to build but passive: users learn Dasher by doing, not watching.
 
 ### Adaptive onboarding (AI-driven)
 
@@ -328,7 +344,7 @@ Interesting but over-engineered for v6's first pass. Can revisit post-launch.
 
 Host a tutorial on the website that users complete before installing. Rejected
 because the tutorial needs to work with the user's actual input device and the
-real Dasher canvas — a web simulation wouldn't reflect their setup.
+real Dasher canvas. A web simulation wouldn't reflect their setup.
 
 ## Prior art
 
@@ -337,29 +353,33 @@ real Dasher canvas — a web simulation wouldn't reflect their setup.
 - **Tobii Communicator:** Eye gaze calibration wizard with progressive practice.
 - **Proloquo2Go:** Crescendo vocabulary onboarding with "add first words" guided
   setup.
-- **SwiftKey / Gboard:** Glide typing tutorial that appears on first use — a
+- **SwiftKey / Gboard:** Glide typing tutorial that appears on first use: a
   short "try typing HELLO" prompt.
 - **v5 Dasher:** Had no onboarding. Users were dropped into the editor. The
   design guide §8 was written specifically to address this gap.
 
 ## Unresolved questions
 
-1. **UX expert engagement** — Who do we engage, and what's the budget? **Open.**
+1. **UX expert engagement:** Who do we engage, and what's the budget? **Open.**
 2. **Is a passive demonstration step needed at all?** **Open.** A research
    output, not an engineering decision.
-3. **Beginner mode persistence** — first-run-only or a persistent setting?
+3. **Beginner mode persistence:** first-run-only or a persistent setting?
    **Open.**
-4. **Cross-platform consistency** — identical across platforms, or per-platform
+4. **Cross-platform consistency:** identical across platforms, or per-platform
    conventions? **Open.**
-5. **Measurement** — how do we measure whether onboarding reduces abandonment?
+5. **Measurement:** how do we measure whether onboarding reduces abandonment?
    **Open.** Analytics ([RFC 0001](./0001-analytics.md)) could track completion
    rate, time-to-first-word, and retention by path.
 
 ## Resolution
 
-- State: pending — open for discussion
+- State: pending (open for discussion)
 - Decided by: —
 - Date: —
 - Decision: Not yet accepted. The UX research ("Design questions needing UX
   expert input") is a prerequisite, and no frontend ships onboarding yet.
 - Open sub-questions: all (see Unresolved questions).
+
+## History
+
+- 2026-11-08 — plain-English summary added, prose simplified for readability, implementation status re-synced against the frontend repos.

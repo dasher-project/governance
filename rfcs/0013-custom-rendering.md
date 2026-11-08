@@ -4,10 +4,14 @@ title: Node-tree rendering API (custom rendering)
 status: active
 platforms: [apple, windows, gtk, android, web, core]
 created: 2026-07-25
-updated: 2026-08-01
+updated: 2026-11-08
 ---
 
 # Node-tree rendering API (custom rendering)
+
+## Plain-English summary
+
+Dasher is a free tool that lets people who cannot use a keyboard write, by zooming in on text they point to with a mouse, their eyes, or a switch. Today every version of Dasher draws that zooming text in one fixed way. This proposal gives the people who build Dasher apps a second option: they can ask for the raw map of text on screen and draw it themselves. That makes new displays possible, such as 3D shapes, views built for virtual-reality headsets, and simplified high-contrast screens. It mainly helps builders who need full control over how Dasher looks, and the users who need those special displays. The groundwork is built and tested, but no shipping version of Dasher uses it yet.
 
 ## Summary
 
@@ -22,9 +26,9 @@ scratch.
 > and "Strand 2". Those names said nothing about what each path does. They are
 > renamed here:
 >
-> - **command-buffer rendering** — the existing path (`dasher_frame` returns an
+> - **command-buffer rendering**: the existing path (`dasher_frame` returns an
 >   `int[]` of draw commands; the frontend replays them).
-> - **node-tree rendering** — the path this RFC adds (`dasher_get_visible_nodes`
+> - **node-tree rendering**: the path this RFC adds (`dasher_get_visible_nodes`
 >   returns the node tree; the frontend draws it itself).
 
 ## Implementation status
@@ -41,17 +45,18 @@ frontend uses it.
   GTK, Android, and web, renders through the command buffer
   (`dasher_frame` → `int[]`). None calls `dasher_get_visible_nodes`.
 - **DasherMac (experimental).** A branch of the macOS app uses node-tree
-  rendering to draw the cube (3D) shape mode. The work is experimental and
-  buggy. It is not merged and does not ship.
+  rendering to draw the cube (3D) shape mode (Dasher-Apple #30, an experimental
+  phoneme proof-of-concept that uses node-tree rendering). The work is
+  experimental and buggy. It is not merged and does not ship.
 - **Scope.** There is no plan to bring node-tree rendering to every platform.
   It exists for the frontends that need full visual control (3D, VR, custom
   accessibility views). The command buffer stays the default.
 
 ### Where this might still matter
 
-The most promising future use is a spatial, eye-tracked port — for example a
+The most promising future use is a spatial, eye-tracked port (for example, a
 Meta Quest build that renders the node tree in 3D and drives it with foveated
-eye tracking. That is future work, not a near-term plan. The API is in place so
+eye tracking). That is future work, not a near-term plan. The API is in place so
 that such a port can read the node tree through the same C boundary as every
 other frontend.
 
@@ -59,7 +64,7 @@ other frontend.
 
 The flat `int[]` command buffer (`dasher_frame`) is a 2D painter's algorithm. It
 has no depth buffer, no perspective, and no compositing. It works well for flat
-rectangles, circles, text, and lines. It **cannot** represent:
+rectangles, circles, text, and lines. It cannot represent:
 
 - **3D extruded cubes** (`LP_SHAPE_TYPE = CUBE`). The depth data
   (`CubeDepthLevel`) exists inside DasherCore, but the flat buffer discards it
@@ -69,9 +74,9 @@ rectangles, circles, text, and lines. It **cannot** represent:
   under the child rectangles.
 - **Spatial or VR rendering** (visionOS). Placing Dasher nodes in 3D space, with
   depth based on the zoom level, is impossible through the flat buffer.
-- **Alternative visualisations** — radial trees, force-directed layouts,
+- **Alternative visualisations**: radial trees, force-directed layouts,
   particle effects, animated transitions.
-- **Custom accessibility rendering** — high-contrast simplified views,
+- **Custom accessibility rendering**: high-contrast simplified views,
   audio-only spatial rendering, screen-reader-friendly text descriptions.
 
 ### What already exists
@@ -201,7 +206,7 @@ DASHER_API int dasher_get_viewport(dasher_ctx* ctx, dasher_viewport* out);
 | Input handling | Yes (`mouse_move` / `key_event`) | — |
 | Language model / probabilities | Yes | — |
 
-The key shift: **shape and depth become frontend concerns, not engine concerns.**
+The key shift: shape and depth become frontend concerns, not engine concerns.
 `LP_SHAPE_TYPE` becomes a hint, not a mandate. The frontend can draw cubes, flat
 rectangles, or something new. A frontend that wants 3D cube extrusion derives it
 from `dasher_node_info.depth`; the viewport does not need a separate extrusion
@@ -222,8 +227,8 @@ The two paths are not mutually exclusive:
 ### What about the opcode-7 cube experiment?
 
 The opcode-7 approach (DasherCore PR #50) carries cube depth data through the
-flat buffer for a frontend two-pass overlay. It works — the cubes are buffered
-and drawn on top — but the effect is weak, because the painter's algorithm
+flat buffer for a frontend two-pass overlay. It works (the cubes are buffered
+and drawn on top), but the effect is weak, because the painter's algorithm
 limits the visual result.
 
 With node-tree rendering, opcode 7 is unnecessary: the frontend has the full
@@ -325,3 +330,4 @@ Per [RFC 0011](./0011-testing.md):
   engine API is implemented and tested, no production frontend uses it, and the
   DasherMac cube experiment is unmerged and buggy. Recorded that a spatial
   eye-tracked port (for example Meta Quest) is the most promising future use.
+- 2026-11-08 — plain-English summary added, prose simplified for readability, implementation status re-synced against the frontend repos.

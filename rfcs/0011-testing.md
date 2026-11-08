@@ -4,37 +4,49 @@ title: Testing expectations for RFCs
 status: active
 platforms: [apple, windows, gtk, android, web, core]
 created: 2026-06-28
-updated: 2026-08-01
+updated: 2026-11-08
 ---
 
 # Testing expectations for RFCs
 
+## Plain-English summary
+
+Dasher is a free tool that lets people who cannot use a keyboard write, by
+zooming in on text they point to with a mouse, their eyes, or a switch. When
+someone improves Dasher, we need proof the change still works as promised. This
+proposal asks every planned change to state in writing how it will be checked:
+by automatic tests where possible, or by a person trying it out. It also records
+where each version of Dasher keeps its tests today. Tests are expected but not
+forced; the current picture is mixed, with some versions well covered and others
+just starting out.
+
 ## Summary
 
-Every RFC should say, in the document itself, **whether the change is testable,
-what kind of test covers it, and where those tests live**. "Manual verification
-only — no automated tests" is an acceptable answer, but it must be a deliberate
+Every RFC should say, in the document itself, whether the change is testable,
+what kind of test covers it, and where those tests live. "Manual verification
+only (no automated tests)" is an acceptable answer, but it must be a deliberate
 one, not a silent gap. This RFC adds a `Testing` section to the template and
 records where tests live in each of our repos, so a contributor implementing an
 RFC on one frontend knows both what to write and where to put it.
 
-This is guidance, **not a merge gate**: a missing or thin test plan does not
+This is guidance, not a merge gate: a missing or thin test plan does not
 block an RFC from going `active`. Reviewers are expected to ask about it; the
 author is expected to answer.
 
 ## Implementation status
 
-Audited August 2026. Adopted in practice. The `Testing` section is in the
-template, and the README cross-references this RFC. It is guidance, not a gate.
+Audited August 2026; repo table re-synced November 2026. Adopted in practice.
+The `Testing` section is in the template, and the README cross-references this
+RFC. It is guidance, not a gate.
 
 | Repo | Framework | State |
 | --- | --- | --- |
 | DasherCore | doctest (C++) | Mature; about 38 test files; the strongest layer. |
 | Dasher-Windows | xUnit | Active (for example, `PiiScrubberTests`). |
-| Dasher-Apple | XCTest | Files exist, but `project.yml` declares `testTargets: []`; the tests are not wired into a build target. |
-| Dasher-Mobile (Android) | JUnit 4 / AndroidX | Deps are in the version catalog; no test sources yet. |
-| dasher-web | None | No test runner is wired up. |
-| Dasher-GTK | doctest | Minimal (one dwell-click test). |
+| Dasher-Apple | XCTest | Shared-logic tests wired (`Tests/DasherSharedTests`: `LogManagerTests`, `EditorKeyActionsTests`, `LocalizationSyncTests`); per-target XCTest `testTargets` in `project.yml` remain `[]`. |
+| Dasher-Mobile (Android) | JUnit 4 / AndroidX | Active (JVM tests including `EditorSyncTest`, `JoystickInputTest`, `LegacyTrainingMigrationTest` under `app/src/test`). |
+| dasher-web | None | No wired test runner; playground flows verified headlessly. |
+| Dasher-GTK | doctest | Active (doctest suite including direct-mode service tests, target-context watcher tests (26 cases), and engine contract tests). |
 
 ## Motivation
 
@@ -52,8 +64,8 @@ The result is the uneven coverage we have today:
 | --- | --- | --- | --- |
 | DasherCore | doctest (C++) | [`tests/`](https://github.com/dasher-project/DasherCore/tree/main/tests) (~32 files, incl. C-API tests) | Mature; the strongest layer |
 | Dasher-Windows | xUnit + Microsoft.NET.Test.Sdk | `tests/Dasher.Windows.Tests/` | Active; e.g. `PiiScrubberTests`, `EngineLogRingBufferTests` for RFC 0009 |
-| Dasher-Apple | XCTest | `tests/` dirs exist | `project.yml` declares `testTargets: []` — files present but not wired into a build target |
-| Dasher-Android | JUnit 4 + AndroidX test (Espresso) | (none yet — `app/src/test`, `app/src/androidTest` not created) | Deps in the version catalog; no test sources |
+| Dasher-Apple | XCTest | `tests/` dirs exist | `project.yml` declares `testTargets: []`; files present but not wired into a build target |
+| Dasher-Android | JUnit 4 + AndroidX test (Espresso) | (none yet: `app/src/test`, `app/src/androidTest` not created) | Deps in the version catalog; no test sources |
 | dasher-web | (none yet) | — | No test tooling wired up |
 | Dasher-GTK | (none yet) | — | TBD |
 
@@ -81,32 +93,32 @@ following prompt (filled in by the author):
 > - If there are no automated tests, say why and how a reviewer verifies the
 >   change (e.g. a manual run-through, a screenshot, a UX step).
 
-"Manual verification only" is a legitimate answer — especially for UX-driven
+"Manual verification only" is a legitimate answer, especially for UX-driven
 RFCs like onboarding (0004/0008) or the access-method IA (0010), where the real
 validation is with users. The point is that the choice is written down.
 
 ### Where tests live (per repo)
 
 A contributor implementing an RFC on a given frontend should put its tests in
-that frontend's test target. Invariants that are true for **every** frontend
+that frontend's test target. Invariants that are true for every frontend
 (the C-API contract, the analytics event schema, the crash-scrubbing rules if
-they're ever shared) belong in **DasherCore** so a single test guards all four
+they're ever shared) belong in DasherCore so a single test guards all four
 frontends.
 
-- **DasherCore** — `tests/` (doctest; run via CMake `ctest`). This is the home
+- **DasherCore**: `tests/` (doctest; run via CMake `ctest`). This is the home
   for cross-frontend invariants. The C-API tests here are the contract every
   frontend relies on.
-- **Dasher-Windows** — `tests/Dasher.Windows.Tests/` (xUnit). Run via
+- **Dasher-Windows**: `tests/Dasher.Windows.Tests/` (xUnit). Run via
   `dotnet test`.
-- **Dasher-Apple** — XCTest test targets (the existing `tests/` dirs need to be
+- **Dasher-Apple**: XCTest test targets (the existing `tests/` dirs need to be
   wired into `project.yml`'s `testTargets`; until then, add the file and flag
   the wiring in the PR).
-- **Dasher-Android** — `app/src/test/` for JVM unit tests (JUnit 4) and
+- **Dasher-Android**: `app/src/test/` for JVM unit tests (JUnit 4) and
   `app/src/androidTest/` for instrumented tests (AndroidX test / Espresso). Both
   are already in the version catalog; the directories just need creating.
-- **dasher-web** — TBD (no test runner wired up yet; pick one when the repo gets
+- **dasher-web**: TBD (no test runner wired up yet; pick one when the repo gets
   its first test).
-- **Dasher-GTK** — TBD.
+- **Dasher-GTK**: TBD.
 
 ### Privacy, data-egress, and correctness specifically
 
@@ -117,9 +129,9 @@ is scrubbed before leaving the device," or "the output equals …", the author
 should name the test that breaks if the promise is violated. Examples from
 already-accepted RFCs:
 
-- **RFC 0001 (analytics)** — a test that no captured event payload contains
+- **RFC 0001 (analytics)**: a test that no captured event payload contains
   typed text / clipboard / canvas contents.
-- **RFC 0009 (crash reporting)** — a scrubber test proving home-directory paths
+- **RFC 0009 (crash reporting)**: a scrubber test proving home-directory paths
   and emails are stripped from the stack trace and engine log tail (Dasher-Windows's
   `PiiScrubberTests` is the reference implementation; each frontend that
   implements 0009 should add an equivalent).
@@ -138,20 +150,20 @@ with no test will (and should) ask.
 
 ## Alternatives considered
 
-- **Hard gate (block `active` without a test plan).** Rejected — too heavy for
+- **Hard gate (block `active` without a test plan).** Rejected: too heavy for
   docs/UX RFCs and would slow the project down. Kept as reviewer expectation.
-- **Per-repo CONTRIBUTING files instead of a central RFC.** Rejected — the
+- **Per-repo CONTRIBUTING files instead of a central RFC.** Rejected: the
   question is cross-cutting and belongs where contributors already look (the RFC
   they're implementing).
 - **A formal tier system (required / recommended / manual / n/a).** Considered
-  and dropped — it reads as bureaucracy to a new contributor. The single prompt
+  and dropped: it reads as bureaucracy to a new contributor. The single prompt
   in the template achieves the same outcome with less jargon.
 
 ## Prior art
 
 - **Rust** marks each RFC's "testing" expectations inline; the Rust team treats
   test coverage as part of stabilisation.
-- **PostHog's own SDKs** ship a shared test suite for the ingestion schema —
+- **PostHog's own SDKs** ship a shared test suite for the ingestion schema,
   analogous to DasherCore owning the cross-frontend invariant tests.
 
 ## Unresolved questions
@@ -168,8 +180,9 @@ with no test will (and should) ask.
    though it isn't a gate? **Open.** Not wired.
 
 3. When Apple wires `testTargets` in `project.yml`, does that count as a
-   prerequisite for this RFC or a follow-up? **Open.** Apple's `testTargets` is
-   still `[]`.
+   prerequisite for this RFC or a follow-up? **Open.** Partial progress: the
+   shared-logic tests (`Tests/DasherSharedTests`) are wired. The per-target
+   XCTest `testTargets` in `project.yml` are still `[]`.
 
 ## Resolution
 
@@ -180,3 +193,7 @@ with no test will (and should) ask.
   template; the README cross-references this RFC. DasherCore and Dasher-Windows
   have active test suites; the other frontends do not.
 - Open sub-questions: Q1, Q2, Q3.
+
+## History
+
+- 2026-11-08 — plain-English summary added, prose simplified for readability, implementation status re-synced against the frontend repos.

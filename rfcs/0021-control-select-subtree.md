@@ -4,20 +4,31 @@ title: Control-mode Select subtree
 status: implemented       # draft | proposed | active | implemented | rejected | withdrawn
 platforms: [core, windows, apple, gtk, android, web]   # platforms affected
 created: 2026-11-01
-updated: 2026-11-02
+updated: 2026-11-08
 ---
 
 # Control-mode Select subtree
 
+## Plain-English summary
+
+Dasher is a free tool that lets people who cannot use a keyboard write, by
+zooming in on text they point to with a mouse, their eyes, or a switch.
+This RFC adds a Select section to Dasher's control menu, so a writer can
+highlight a letter, a word, a paragraph, or the whole text, forwards or
+backwards. Highlighting matters because copying or cutting text needs a
+selection first. Each app does the highlighting in its own way, and an app
+that cannot do it simply does not show the Select options. This is now
+live in the Windows and Apple apps; the other apps will add it later.
+
 ## Summary
 
 Add a **Select** group to the control-mode node tree, mirroring the existing
-Move and Delete groups' granularity — **Char / Word / Paragraph / All**,
+Move and Delete groups' granularity: **Char / Word / Paragraph / All**,
 backward and forward (Sentence is deferred; see Unresolved questions).
-Selecting is an OS/target-application notion the engine cannot execute, so
-the group is implemented as a **frontend-registered custom action** on the
-existing `dasher_register_action` surface: the engine grows the tree; each
-platform performs the selection natively, and platforms that have not
+Selecting is an OS/target-application notion the engine cannot execute. The
+group is therefore implemented as a **frontend-registered custom action** on
+the existing `dasher_register_action` surface: the engine grows the tree;
+each platform performs the selection natively, and platforms that have not
 registered a handler never see the nodes at all.
 
 ## Implementation status
@@ -32,12 +43,12 @@ registered a handler never see the nodes at all.
 
 **Pending follow-ups:** the gating-liveness migration of Move/Delete onto
 the registered-action family is DONE (DasherCore #107 + Dasher-Windows
-#92, both merged 2026-11-02) and the Windows injection-contract fixes
+#92, both merged 2026-11-02), and the Windows injection-contract fixes
 are DONE (modifier hygiene + off-UI-thread fail-soft focus restore,
-Dasher-Windows #93, merged 2026-11-02 — root causes confirmed from
+Dasher-Windows #93, merged 2026-11-02). Root causes were confirmed from
 field logs before implementation: the stuck-Ctrl shortcut storm and the
-queue-coupled handshake, issue #90; the read-source flap, issue #91).
-Remaining: other platforms' move/delete registrations (GTK/
+queue-coupled handshake (issue #90), and the read-source flap (issue
+#91). Remaining: other platforms' move/delete registrations (GTK/
 Android follow-ups; the groups simply do not appear until they
 register).
 
@@ -50,12 +61,12 @@ Heide (v0.1.35 tester feedback), after the Control node was restored:
 > paragraph, etc."
 
 The control tree today (`DasherCore/Data/control/control.xml`) offers Stop,
-Pause, **Move**, **Delete**, Clear and **Speak** — Move already has exactly
+Pause, **Move**, **Delete**, Clear and **Speak**. Move already has exactly
 this granularity, but it *moves the caret*; there is no way to **select**
 text through Dasher at all. For an eye-gaze AAC user, selection is currently
 impossible without a separate on-screen keyboard: she keeps a
 TouchMousePointer running beside Dasher largely for this. Select composes
-with the pieces that already exist — *Select word* (control node) → *Copy
+with the pieces that already exist: *Select word* (control node) → *Copy
 selection* (her most-used toolbar button) is her copy-heavy workflow with no
 third-party tool.
 
@@ -89,11 +100,11 @@ subtree, so nothing is lost permanently.
    </node>
    ```
 
-   v1 `dist` values: `char | word | paragraph | all` (no `sentence` — see
+   v1 `dist` values: `char | word | paragraph | all` (no `sentence`; see
    Unresolved questions).
 
 2. **Execution rides the existing custom-action surface.** `select` is *not*
-   a built-in `ControlAction` — selection has no engine-side semantics. The
+   a built-in `ControlAction`: selection has no engine-side semantics. The
    frontend registers a handler **before** `dasher_set_screen_size()` (the
    documented timing constraint, DasherCore `docs/CUSTOM_ACTIONS.md`):
 
@@ -106,12 +117,12 @@ subtree, so nothing is lost permanently.
    Contract details implementers must respect: the attribute arrays are
    valid **only during the callback** (copy what you need); the callback
    fires from `CContNode::Do()` on the thread that runs `dasher_frame()`;
-   and the engine validates **no** attributes for custom actions — a typo'd
+   and the engine validates **no** attributes for custom actions. A typo'd
    `dist` fails silently at runtime, never at parse time (true of all
    custom actions today; noted here so the Windows implementation logs
    unexpected values).
 
-3. **Capability gating — the one engine change.** Current behaviour
+3. **Capability gating: the one engine change.** Current behaviour
    (verified, `ControlManager.cpp` parsing): an XML element whose name is
    not in the registry is **silently ignored, but the containing node is
    kept**. Shipping the subtree ungated would therefore produce exactly the
@@ -123,13 +134,13 @@ subtree, so nothing is lost permanently.
      action element is live on a platform iff the user can perceive its
      effect there. For **custom actions** (`select`) that means:
      registered. For **built-in edit actions** (`move`, `delete`) it means:
-     the platform demonstrably consumes their C-API event path — the
+     the platform demonstrably consumes their C-API event path. The
      engine-side `ctrlMove`/`ctrlDelete` only mutate internal state
      (`cursorPos`, `editBuffer`) and never notify the frontend, so an
      engine "execution" can be user-invisible on a headless engine. This
      was field-reported as Dasher-Windows #88 (Heide, v0.1.37: the
      Move/Delete groups render and zoom but act dead), and no platform
-     consumes `ctrlMove` today — so these two migrate onto the
+     consumes `ctrlMove` today, so these two migrate onto the
      **registered-action family**, gating exactly like `select`. Their
      `dist`/`forward` attributes already parse (the move/delete factories
      in `ControlManager.cpp`), so the migration is an engine PR, not a
@@ -139,15 +150,15 @@ subtree, so nothing is lost permanently.
      this platform AND retains no other actions** after that element is
      dropped. Structural
      group nodes (`CTL_SELECT`, the direction groups) carry no actions and
-     are never skipped by this rule — they are handled by the next clause.
+     are never skipped by this rule: they are handled by the next clause.
    - **Cascade-prune emptied ancestors**: if skipping a node's children
      leaves an ancestor with no action-bearing descendants and no actions of
      its own, the ancestor is skipped too (Select → "⇐" → dead end must not
      render).
      "Action-bearing descendants" is a graph-reachability FIXPOINT, not a
-     one-level walk — Move/Delete leaves `<ref>` their own direction groups
+     one-level walk: Move/Delete leaves `<ref>` their own direction groups
      (cycles), so the prune must iterate to a fixed point.
-   - **Compound nodes** (the house style mixes actions per node — see
+   - **Compound nodes** (the house style mixes actions per node: see
      `CTL_CLEAR`, or `speak`+`move` in the Speak subtree): drop the
      not-live action element, keep the node if any action remains, skip
      it if none does. A future `<speak what="word"/><select dist="word"/>`
@@ -175,7 +186,7 @@ target's own Copy toolbar, our toolbar Copy/Cut, keyboard Delete, screen
 readers) acts on it without further work.
 
 **Injection contract** (all keystroke platforms; added after field reports
-Dasher-Windows #89 and #90 — a sticky Control-mode Ctrl degraded a select
+Dasher-Windows #89 and #90: a sticky Control-mode Ctrl degraded a select
 chord to line-granularity, and zooming with a held sticky Ctrl across a
 foreground switch hung the UI thread):
 
@@ -189,7 +200,7 @@ foreground switch hung the UI thread):
   UI/render thread; it fails soft (timeout, abort) when the foreground
   target changes mid-chord, and can never wedge the interface. Silent
   failure against hostile targets (see Edge cases) is the accepted
-  envelope — a hang is not, and is a bug in every case.
+  envelope: a hang is not, and is a bug in every case.
 
 | dist | Windows direct (keystrokes) | Windows editor | Android IME (direct) | GTK | Apple |
 |---|---|---|---|---|---|
@@ -205,20 +216,20 @@ Honesty notes per platform, because the mappings are NOT uniform:
   controls, browsers). Same failure envelope as every keystroke we inject;
   documented rather than papered over.
 - **Apple**: paragraph is `Shift+Opt+↑/↓`. (`Shift+Cmd+↑/↓` selects to
-  **document start/end** — the obvious-looking mapping is a data-loss bug
+  **document start/end**: the obvious-looking mapping is a data-loss bug
   when followed by Cut; called out so nobody "fixes" it later.)
 - **Android (direct mode)**: `InputConnection` takes absolute offsets an IME
   does not inherently have. v1 implements **char** (caret±1 via the
-  `onUpdateSelection` shadow — one offset, no text read) and **all** (via
+  `onUpdateSelection` shadow: one offset, no text read) and **all** (via
   `performContextMenuAction(selectAll)`, app-dependent). **Word/paragraph
   are deferred**: word needs a cursor-adjacent read (`getTextBefore/
-  AfterCursor` — the bounded, trusted class) plus boundary logic, and
-  paragraph needs unbounded reads the direct mode deliberately distrusts;
-  both wait for a dedicated Android PR rather than shipping half-measured.
+  AfterCursor`, the bounded, trusted class) plus boundary logic, and
+  paragraph needs unbounded reads the direct mode deliberately distrusts.
+  Both wait for a dedicated Android PR rather than shipping half-measured.
   Android **editor mode** (our own pane) implements the full set from
   measured text, like the Windows editor.
 - **GTK**: reuses the frontend's existing **ydotool** injection path (RFC
-  0015's status table) — available under X11 and Wayland alike where the
+  0015's status table): available under X11 and Wayland alike where the
   daemon runs, so no new injection mechanism and no editor-mode-only
   degradation; Wayland inherits 0015's focus/keep-above caveats. XTest
   remains an X11-native fallback only.
@@ -234,12 +245,12 @@ Honesty notes per platform, because the mappings are NOT uniform:
   shadow-compare. The engine's *control-mode Delete* group is buffer-based
   today, but per the gating criterion above it migrates onto the
   registered-action family (Dasher-Windows #88) and then rides the same
-  injection contract as Select — no behavioural coupling beyond that.
+  injection contract as Select: no behavioural coupling beyond that.
 - **Copy/Cut**: the toolbar's *Copy selection* / *Cut selection in target
-  app* operate on the OS selection — Select is their missing first half.
+  app* operate on the OS selection: Select is their missing first half.
 - **Dasher-Windows #79 interaction (verified, not assumed)**: the
-  shadow-compare is caret-anchored, not text-only — `SentenceWindow.Trim`
-  windows the target read at the caret, so any selection
+  shadow-compare is caret-anchored, not text-only. `SentenceWindow.Trim`
+  windows the target read at the caret. Any selection
   that moves the caret-anchored window across a sentence boundary (backward
   paragraph selects by definition; forward selects past a delimiter too)
   changes the sentence window and is a genuine `Seed` verdict under the
@@ -247,8 +258,8 @@ Honesty notes per platform, because the mappings are NOT uniform:
   class. The Enter-specific settle guard does not cover select chords.
   **The Windows implementation must extend the own-injection settle-window
   pattern to selection chords** (timestamp at chord injection, skip
-  `caret moved` seeds inside the window, same log signature), and must add a
-  Dasher-Windows test (ContextSeedPolicy xUnit suite) confirming chained
+  `caret moved` seeds inside the window, same log signature). It must also
+  add a Dasher-Windows test (ContextSeedPolicy xUnit suite) confirming chained
   selects in the settle window no longer re-seed. Editor mode is unaffected (selection does not leave the
   pane).
 - **Move vs Re-anchor**: Move (engine caret) and the mini-bar Re-anchor
@@ -260,7 +271,7 @@ Honesty notes per platform, because the mappings are NOT uniform:
 - **Targets without selection keystrokes** (elevated windows, consoles):
   selection silently fails, as it does for every keystroke we inject today;
   no new failure class.
-- **Read-only fields**: selection is harmless (copy-only) — same as native.
+- **Read-only fields**: selection is harmless (copy-only); same as native.
 - **IME composition active**: defer the action until composition ends
   (editor mode's existing `_imeSeedPending` pattern).
 - **Game mode**: control-node reachability under game mode is
@@ -270,10 +281,10 @@ Honesty notes per platform, because the mappings are NOT uniform:
   game module's target assumptions and needs its own edge-case treatment
   before the Windows direct-mode mapping ships.
 - **RTL locales** (ar/fa/ur): arrow *direction* flips visually but
-  `Ctrl+Shift+←` still selects a word leftward — semantics are unchanged;
+  `Ctrl+Shift+←` still selects a word leftward: semantics are unchanged;
   no special casing.
 - **Keyboard extensions** (Apple DasherKeyboard, Android IME): selection
-  targets the host app's field — same paths as the direct-mode mappings.
+  targets the host app's field: same paths as the direct-mode mappings.
 
 ### Telemetry
 
@@ -282,18 +293,18 @@ schema's `surface` enum is main_toolbar/status_bar/ime_toolbar). The
 implementation PR extends the schema additively: new `surface` value
 `control_tree`, new `action` value `select`, and the granularity carried by EITHER widening the
 enum-typed `state` field (today a closed enum: on/off/right/left/bottom/top)
-with composite values (char_fwd ... all_bwd) OR adding a `dist` property —
-the schema's grain is fixed vocabularies, so this is a real amendment
+with composite values (char_fwd ... all_bwd) OR adding a `dist` property.
+The schema's grain is fixed vocabularies, so this is a real amendment
 decision, made at implementation time per the RFC 0001 process.
 
 ## Drawbacks
 
 - The engine ships tree structure for actions it cannot execute or
-  verify — the gating rule (live = user-perceivable, per platform) is the
+  verify. The gating rule (live = user-perceivable, per platform) is the
   price of sharing one `control.xml` across five platforms, and the only
   thing standing between each of them and dead nodes. The original
   criterion measured engine executability, which let built-in move/delete
-  through as "handled" while their effects never reached the user — the
+  through as "handled" while their effects never reached the user; the
   blind spot was field-reported as Dasher-Windows #88 and the criterion
   widened in place.
 - Keystroke-based selection is inherently app-dependent (the Windows ⚠ and
@@ -306,22 +317,22 @@ decision, made at implementation time per the RFC 0001 process.
 ## Alternatives considered
 
 - **Per-platform `control.xml` overrides** (the parser already supports
-  user-dir control XML): each frontend ships only its own tree — no gating
-  change needed. Rejected for v1: five divergent trees to maintain, and
+  user-dir control XML): each frontend ships only its own tree, and no
+  gating change is needed. Rejected for v1: five divergent trees to maintain, and
   the gating fix is small and benefits any future custom action.
-- **Toolbar Select buttons** (like the removed Select All): rejected — the
+- **Toolbar Select buttons** (like the removed Select All): rejected. The
   strip is crowded (the v0.1.35 editing keys filled it), granularity needs
   a menu, and the control tree is where Move/Delete already live; Heide's
   request explicitly pointed there.
-- **Built-in engine `SelectAction`** with a new C-API callback: rejected —
-  no engine-side semantics exist to hang it on; the custom-action surface
+- **Built-in engine `SelectAction`** with a new C-API callback: rejected.
+  No engine-side semantics exist to hang it on; the custom-action surface
   is exactly the documented extension point.
 
 ## Prior art
 
 - Dasher v5's control mode (Move/Delete/Speak; no Select).
 - iOS VoiceOver rotor + selection commands; Windows Speech Access
-  ("select that"); macOS VoiceOver — all demonstrate granularity-based
+  ("select that"); macOS VoiceOver: all demonstrate granularity-based
   selection as an accessibility primitive, all implemented natively per OS.
   This RFC's split (shared semantics, native execution) mirrors their
   architecture deliberately.
@@ -331,7 +342,7 @@ decision, made at implementation time per the RFC 0001 process.
 - **Sentence granularity**: rejected for v1 because no platform has a
   native select-to-sentence keystroke and a frontend-measured heuristic
   needs exactly the full-text reads direct mode distrusts. Revisit if
-  editor-mode-only sentence selection (measured, our own pane — safe)
+  editor-mode-only sentence selection (measured, our own pane; safe)
   would serve the workflows users actually describe.
 - **Selection-state feedback**: after "Select word", an eye-gaze user has
   no acknowledgement that anything happened (in direct mode the engine
@@ -345,18 +356,18 @@ decision, made at implementation time per the RFC 0001 process.
 ## Testing
 
 - **Engine (automatic)**: control-tree parse tests in the
-  `test_control_actions.cpp` pattern — Select nodes present when a handler
-  is registered, absent when not; **compound nodes degrade** (speak+select
+  `test_control_actions.cpp` pattern: Select nodes present when a handler
+  is registered, absent when not. **Compound nodes degrade** (speak+select
   node keeps speak); **emptied ancestors pruned**; **refs to skipped nodes
   skipped**; attributes (`forward`, `dist`) surface to the callback
   verbatim.
 - **Windows editor mode (automatic)**: measured distances and the
   active-end state machine are pure functions (the
-  `SentenceWindow`/`EditorKeyActions` pattern) — unit-tested over
+  `SentenceWindow`/`EditorKeyActions` pattern): unit-tested over
   caret/selection/word/paragraph fixtures including CRLF and surrogate
   pairs.
 - **Windows direct mode (manual)**: keystroke mapping verified by hand in
-  the target matrix (Outlook, Word, Notepad, a browser field) — the same
+  the target matrix (Outlook, Word, Notepad, a browser field): the same
   manual matrix the editing keys shipped with, with the Word-vs-plain-edit
   paragraph difference explicitly checked.
 
@@ -373,7 +384,7 @@ decision, made at implementation time per the RFC 0001 process.
 
 ## Resolution
 
-*(filled in when the RFC reaches consensus — see the governance README)*
+*(filled in when the RFC reaches consensus: see the governance README)*
 
 ## History
 
@@ -411,3 +422,4 @@ decision, made at implementation time per the RFC 0001 process.
   10m49s; #91 (filed from the same logs) was the read-source flap. All
   fixes landed same day: DasherCore #107 (move/delete migration),
   Dasher-Windows #92 (#88/#89) and #93 (#90/#91).
+- 2026-11-08 — plain-English summary added, prose simplified for readability, implementation status re-synced against the frontend repos.

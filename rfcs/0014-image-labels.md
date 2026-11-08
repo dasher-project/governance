@@ -4,10 +4,14 @@ title: Image labels for alphabet symbols
 status: implemented
 platforms: [apple, windows, gtk, android, web, core]
 created: 2026-07-31
-updated: 2026-08-01
+updated: 2026-11-08
 ---
 
 # Image labels for alphabet symbols
+
+## Plain-English summary
+
+Dasher is a free tool that lets people who cannot use a keyboard write, by zooming in on text they point to with a mouse, their eyes, or a switch. Every choice on screen is shown as a written word or letter today. Some people, above all children who cannot yet read, need pictures instead. This proposal lets the files that define Dasher's on-screen choices carry a picture for any item, and the app then shows the picture in place of the written label. The main aim is picture-based communication, where a picture carries the meaning of a word or a sound. The groundwork is built and tested, and the Mac app can show images, but no set shipped with Dasher uses pictures yet.
 
 ## Summary
 
@@ -49,8 +53,9 @@ Two problems make this less useful than it first looks:
    phoneme-based AAC: a pre-literate user needs a picture for each phoneme, not
    an IPA glyph or an X-SAMPA code. That phoneme work (see
    `Dasher-Apple/docs/PHONEME_ALPHABET.md` and the `phonemeSymbols/` design
-   assets) is experimental. Until a real phoneme alphabet with real images
-   ships, image labels are infrastructure without a tested consumer.
+   assets; proof-of-concept in Dasher-Apple #30) is experimental. Until a real
+   phoneme alphabet with real images ships, image labels are infrastructure
+   without a tested consumer.
 
 ### Scope
 
@@ -62,16 +67,16 @@ the platforms that have a concrete need (today, macOS).
 
 Dasher's alphabet XML defines each symbol with a text `label` (what appears in
 the Dasher box) and `text` (what is output when the symbol is selected). For an
-orthographic alphabet this is enough — the label is a letter.
+orthographic alphabet this is enough: the label is a letter.
 
 For **phoneme-based AAC**, the label might be an IPA glyph (æ, ʃ) or an X-SAMPA
-code ({, S). These are meaningless to a pre-literate user — the population that
-most needs phoneme-based AAC. Trinh et al. (2012, 2014) used Jolly Phonics images
+code ({, S). These are meaningless to a pre-literate user (the population that
+most needs phoneme-based AAC). Trinh et al. (2012, 2014) used Jolly Phonics images
 (42 pictorial phoneme cards) precisely because their users were non-literate.
 
 The need extends beyond phonemes. Any symbol-based AAC alphabet (PCS, Bliss,
 Minspeak) benefits from image labels. Dasher has no way to draw images in boxes
-today — only text.
+today; it draws only text.
 
 ## Detailed design
 
@@ -192,9 +197,9 @@ custom phoneme image set, or mix text and image labels in one alphabet.
 
 No tension. RFC 0013 defines two rendering paths:
 
-- **Command-buffer rendering** — the frontend decodes the `int[]` opcodes and
+- **Command-buffer rendering**: the frontend decodes the `int[]` opcodes and
   draws them.
-- **Node-tree rendering** — the frontend queries the node tree through
+- **Node-tree rendering**: the frontend queries the node tree through
   `dasher_get_visible_nodes` and draws from scratch.
 
 This RFC adds **one C API function** that works the same way for both paths. The
@@ -202,9 +207,9 @@ frontend queries the image paths independently of the rendering path it chooses.
 There is:
 
 - No `image_index` field added to `dasher_node_info` (a node-tree frontend does
-  not need it — it already has the mapping).
+  not need it; it already has the mapping).
 - No `ImageLabel` class in DasherCore (a command-buffer frontend does not need
-  it — it substitutes the image before it calls `DrawString`).
+  it; it substitutes the image before it calls `DrawString`).
 - No new command-buffer opcode.
 
 The engine carries the metadata (the image path in the alphabet definition); the
@@ -278,9 +283,9 @@ Use emoji characters as labels. Rejected because:
   pre-literate users.
 - **Tobii Communicator, Proloquo2Go, Snap Core First:** commercial AAC apps with
   image-based symbol sets (PCS, Bliss). All support custom image sets.
-- **CSS `content: url()`:** a web analogy — text content replaced by an image at
-  draw time. The semantic content is unchanged; only the visual representation
-  changes.
+- **CSS `content: url()`:** a web analogy, where text content is replaced by an
+  image at draw time. The semantic content is unchanged; only the visual
+  representation changes.
 
 ## Testing
 
@@ -304,7 +309,7 @@ Per [RFC 0011](./0011-testing.md):
 1. **SVG support.** **Open.** PNG at 128×128 for v1; SVG is a future option.
 2. **Runtime image-set switching.** **Open.** Could be a frontend setting that
    overrides the image-directory prefix.
-3. **Image aspect-ratio handling.** **Open.** The hard problem — see the honest
+3. **Image aspect-ratio handling.** **Open.** The hard problem; see the honest
    assessment. Dasher boxes vary in aspect ratio; images could be stretched,
    letterboxed, or cropped.
 
@@ -334,3 +339,4 @@ Per [RFC 0011](./0011-testing.md):
   the honest implementation status: engine and macOS-only frontend landed;
   dynamic image sizing is hard; the phoneme-symbol use case is experimental;
   not planned for every platform.
+- 2026-11-08 — plain-English summary added, prose simplified for readability, implementation status re-synced against the frontend repos.

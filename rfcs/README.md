@@ -61,6 +61,11 @@ means "landed on some platforms, not all." Every RFC also opens with a
 `## Plain-English summary` written for non-technical readers: start there if the
 specs are not your day job.
 
+> **Platform scope note:** **watchOS** ships inside Dasher-Apple as a
+> **companion to the iPhone app** — a simple touch + Digital Crown UI with no
+> standalone ambitions. Read "apple" in the Platforms column as including it;
+> input specifics live in [RFC 0010](./0010-input-access-methods.md).
+
 | # | Title | Status | Platforms |
 | --- | --- | --- | --- |
 | _0000_ | _(`0000-template.md` — not a real RFC)_ | — | — |

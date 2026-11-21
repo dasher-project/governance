@@ -2,6 +2,8 @@
 
 The official governance model for all the projects in the dasher project
 
+> 🗺️ Looking for what we're working on next? See the **[project roadmap](ROADMAP.md)** — the current plan of work across all Dasher repositories, maintained as the steering group's working document.
+
 - [Roles](#roles)
   - [Project Lead](#project-lead)
   - [Maintainer](#maintainer)
@@ -51,7 +53,7 @@ Dasher v6 is one **shared engine** ([DasherCore](https://github.com/dasher-proje
 
 - [DasherCore](https://github.com/dasher-project/DasherCore) — shared C++ engine + C API
   - [prlw1](https://github.com/prlw1), [ipomoena](https://github.com/ipomoena), [willwade](https://github.com/willwade), [PapeCoding](https://github.com/PapeCoding), [gavinhenderson](https://github.com/gavinhenderson), [cagdasgerede](https://github.com/cagdasgerede)
-- [Dasher-Apple](https://github.com/dasher-project/Dasher-Apple) — iOS / macOS / visionOS (SwiftUI)
+- [Dasher-Apple](https://github.com/dasher-project/Dasher-Apple) — iOS / macOS / visionOS / watchOS (SwiftUI). watchOS is a simple **companion to the iPhone app** (touch + Digital Crown) — no standalone ambitions.
   - [willwade](https://github.com/willwade)
 - [Dasher-Windows](https://github.com/dasher-project/Dasher-Windows) — Windows (Avalonia / .NET)
   - [willwade](https://github.com/willwade)

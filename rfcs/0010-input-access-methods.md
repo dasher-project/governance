@@ -175,6 +175,12 @@ parts that are still open. They are not normative yet.
 | handTracking | listed (visionOS Phase 3) | — | — | — |
 | switchesOnly | ✓ | ✓ (method exists, **no capture UI**) | TBD | **TBD (new)** |
 
+> **watchOS** (inside Dasher-Apple): a **companion app — it requires the
+> iPhone app** and has no standalone ambitions. Steering is touch only, plus
+> the Digital Crown for speed; it follows the Apple column above and inherits
+> Apple-platform decisions. No eye-gaze, switch, tilt or hand-tracking
+> support is planned.
+
 ### Eye-gaze tracker abstraction (proposal)
 
 - A **tracker interface** per platform with one job: produce a stream of
@@ -324,3 +330,4 @@ all four platforms adopt the same shape.
   those the normative Canonical model. Resolved Q1 (the mapping lives in
   DasherCore). Q2 (switch access) remains open.
 - 2026-11-08 — plain-English summary added, prose simplified for readability, implementation status re-synced against the frontend repos.
+- 2026-11-09 — watchOS added to the per-platform availability note: companion app requiring the iPhone app, touch + Digital Crown only, follows the Apple column; no other steering methods planned.
